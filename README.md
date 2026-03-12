@@ -33,7 +33,7 @@ A free web application where users input their ski info and describe their issue
 
 2. **RAG query** — the input is used to search a vector database of ski-specific knowledge (common issues by model, manufacturer specs, repair guides, parts sources)
 
-3. **LLM response** — Claude generates repair guidance grounded in the retrieved context, with YouTube links and purchase recommendations
+3. **LLM response** — Gemini generates repair guidance grounded in the retrieved context, with YouTube links and purchase recommendations
 
 ---
 
@@ -49,7 +49,7 @@ A free web application where users input their ski info and describe their issue
 | Layer | Technology |
 |---|---|
 | Backend | Python / Flask |
-| Frontend | Flask + Jinja2 templates (MVP), React (v2) |
+| Frontend | Flask +  React |
 | LLM | Gemini API (Google) |
 | Vector Database | pgvector on GCP Cloud SQL (PostgreSQL) |
 | Data Collection | GCP Cloud Run Jobs (scheduled Python agent) |
@@ -70,7 +70,7 @@ Flask App (Cloud Run)
      ├── POST /assess
      │     ├── Embed user input
      │     ├── Query pgvector (retrieve relevant ski/repair context)
-     │     └── Claude API (LLM generates response with context)
+     │     └── Gemini API (LLM generates response with context)
      │
      └── Static pages / modal form
 
