@@ -1,6 +1,6 @@
 # SkiWare — Contributor Guide
 
-An AI-powered ski damage assessment tool. Upload a photo of your skis, get a damage classification, severity assessment, and step-by-step repair instructions.
+SkiWare is an AI-powered ski damage assessment tool. Users input their ski details and describe an issue — SkiWare returns a safety flag, severity rating, estimated shop cost, DIY repair instructions, a parts checklist, and relevant YouTube guides. See [README.md](README.md) for full project context.
 
 ---
 
@@ -9,7 +9,7 @@ An AI-powered ski damage assessment tool. Upload a photo of your skis, get a dam
 ```
 SkiWare/
 ├── app/
-│   └── main.py              # Flask application (all backend logic lives here)
+│   └── main.py              # Current: Flask placeholder — to be replaced with FastAPI
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml       # CI/CD — auto-deploys to GCP Cloud Run on push to main
@@ -17,6 +17,24 @@ SkiWare/
 ├── docker-compose.yml       # Local development setup
 ├── requirements.txt         # Python dependencies
 └── setup-gcp.sh             # One-time GCP bootstrap script (already run, don't re-run)
+```
+
+**Target structure** once the Flask → FastAPI + React migration is done:
+```
+SkiWare/
+├── backend/
+│   ├── main.py              # FastAPI app entrypoint
+│   ├── routes/              # API route handlers
+│   ├── rag/                 # Embedding, retrieval, pgvector logic
+│   └── models.py            # Pydantic models for request/response validation
+├── frontend/                # React app (Create React App or Vite)
+│   ├── src/
+│   └── package.json
+├── .github/workflows/
+│   └── deploy.yml
+├── Dockerfile
+├── docker-compose.yml
+└── requirements.txt
 ```
 
 ---
@@ -85,14 +103,33 @@ Deployment is fully automatic. Every push to `main` triggers the GitHub Actions 
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Backend | Python / Flask |
-| Server | Gunicorn |
-| Container | Docker |
-| Hosting | GCP Cloud Run (serverless) |
-| Container Registry | GCP Artifact Registry |
-| CI/CD | GitHub Actions |
+| Layer | Current | Target |
+|---|---|---|
+| Backend | Python / Flask | Python / FastAPI |
+| Frontend | Flask placeholder | React |
+| Server | Gunicorn | Uvicorn (FastAPI's async server) |
+| Container | Docker | Docker |
+| LLM | — | Gemini API (Google) |
+| Vector Database | — | pgvector on GCP Cloud SQL (PostgreSQL) |
+| Data Collection | — | GCP Cloud Run Jobs (scheduled Python agent) |
+| Hosting | GCP Cloud Run | GCP Cloud Run |
+| Container Registry | GCP Artifact Registry | GCP Artifact Registry |
+| CI/CD | GitHub Actions | GitHub Actions |
+
+### Migrating from Flask to FastAPI
+
+When you're ready to make the switch:
+
+1. Replace `flask` and `gunicorn` in `requirements.txt` with `fastapi` and `uvicorn[standard]`
+2. Rewrite `app/main.py` — routing syntax is nearly identical:
+   ```python
+   # Flask              →   FastAPI
+   @app.route("/")      →   @app.get("/")
+   @app.route("/assess", methods=["POST"])  →  @app.post("/assess")
+   ```
+3. Define Pydantic models for request/response validation (replaces manual `request.json` parsing)
+4. Update the Dockerfile `CMD` from `gunicorn ... app.main:app` to `uvicorn app.main:app --host 0.0.0.0 --port 8080`
+5. Test locally, then open a PR
 
 ---
 
@@ -101,8 +138,10 @@ Deployment is fully automatic. Every push to `main` triggers the GitHub Actions 
 | Variable | Description | Default |
 |---|---|---|
 | `PORT` | Port the app listens on | `8080` |
+| `GEMINI_API_KEY` | Gemini API key for LLM calls | required in production |
+| `DATABASE_URL` | Cloud SQL connection string for pgvector | required in production |
 
-Any secrets (API keys, etc.) should be added as GitHub Actions secrets and as Cloud Run environment variables — never committed to the repo.
+Any secrets should be added as GitHub Actions secrets and passed to Cloud Run via `--set-env-vars` in the deploy step — never committed to the repo.
 
 ---
 
