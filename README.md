@@ -51,8 +51,8 @@ A free web application where users input their ski info and describe their issue
 
 | Layer | Technology |
 |---|---|
-| Backend | Python / Flask |
-| Frontend | Flask +  React |
+| Backend | Python / FastAPI |
+| Frontend | Placeholder HTML page (React planned) |
 | LLM | Gemini API (Google) |
 | Vector Database | pgvector on GCP Cloud SQL (PostgreSQL) |
 | Data Collection | GCP Cloud Run Jobs (scheduled Python agent) |
@@ -70,7 +70,7 @@ A free web application where users input their ski info and describe their issue
 | Container Registry | GCP Artifact Registry | GCP Artifact Registry |
 | CI/CD | GitHub Actions | GitHub Actions |
 
-> **Note:** The backend is currently a Flask placeholder used to validate the CI/CD pipeline. The migration to FastAPI and React is the first major development milestone. See [CONTRIBUTING.md](CONTRIBUTING.md) for migration guidance.
+> **Note:** The backend now runs on FastAPI as a lightweight placeholder while the broader API and React frontend are built out. See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup and next steps.
 
 ---
 
@@ -80,10 +80,10 @@ A free web application where users input their ski info and describe their issue
 User Browser
      │
      ▼
-React Frontend          ← target (currently Flask placeholder)
+React Frontend          ← target
      │ JSON over HTTP
      ▼
-FastAPI Backend         ← target (currently Flask placeholder)
+FastAPI Backend         ← current placeholder
      │
      ├── POST /assess
      │     ├── Embed user input
@@ -151,7 +151,7 @@ Cloud SQL (PostgreSQL + pgvector)
 ## Roadmap
 
 ### MVP
-- [ ] Migrate backend from Flask → FastAPI
+- [x] Migrate backend from Flask → FastAPI
 - [ ] Build React frontend with ski info input modal
 - [ ] Gemini API integration with structured response (safety flag, severity, cost estimate, time/skill, instructions, parts, YouTube links)
 - [ ] Basic RAG pipeline with pgvector
@@ -184,4 +184,13 @@ Cloud SQL (PostgreSQL + pgvector)
 
 ## Contributing
 
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup, branching workflow, and PR guidelines.
+
+this is a read me test change
+
+---
+
+## Front-End Figma Mockup
+
+https://www.figma.com/make/KqC5Oz8NcWsw9GHjK1UY6Z/-?t=HvXVJCTIa0UEwSLV-1&preview-route=%2Fassessment
