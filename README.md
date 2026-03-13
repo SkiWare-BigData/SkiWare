@@ -61,7 +61,7 @@ A free web application where users input their ski info and describe their issue
 | CI/CD | GitHub Actions |
 | Layer | Current | Target |
 |---|---|---|
-| Backend | Python / Flask | Python / FastAPI |
+| Backend | Python / FastAPI |
 | Frontend | Flask placeholder | React |
 | LLM | — | Gemini API (Google) |
 | Vector Database | — | pgvector on GCP Cloud SQL (PostgreSQL) |
