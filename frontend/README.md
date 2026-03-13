@@ -39,6 +39,8 @@ npm run dev
 
 The app will be available at `http://localhost:5173`
 
+When running through the root `docker-compose.yml`, Vite proxies `/api/*` requests to the FastAPI container at `http://app:8080`, which serves `backend.main:app`.
+
 ### Build for Production
 
 ```bash
@@ -152,16 +154,18 @@ Currently using React's built-in `useState`. For a more complex app, consider Re
 ### Error Handling
 Currently, if the API request fails, mock data is displayed. This should be updated to show proper error states once the backend is ready.
 
-## Building for Deployment
+## Docker Development
 
-The `docker-compose.yml` in the root directory should be updated to build and serve the frontend:
+From the repo root:
 
-```dockerfile
-# In Dockerfile
-COPY frontend/dist /app/frontend
+```bash
+docker compose up --build
 ```
 
-Then serve static files from the backend (Flask/FastAPI).
+This starts:
+
+- React/Vite at `http://localhost:5173`
+- FastAPI at `http://localhost:8080`
 
 ## Environment Variables
 

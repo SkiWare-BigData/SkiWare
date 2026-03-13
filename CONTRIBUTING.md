@@ -8,8 +8,11 @@ SkiWare is an AI-powered ski damage assessment tool. Users input their ski detai
 
 ```
 SkiWare/
-├── app/
-│   └── main.py              # Current FastAPI placeholder backend
+├── backend/
+│   ├── main.py              # FastAPI app entrypoint
+│   ├── models.py            # Shared Pydantic request/response models
+│   ├── routers/             # API route handlers
+│   └── services/            # Business logic behind route handlers
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml       # CI/CD — auto-deploys to GCP Cloud Run on push to main
@@ -19,14 +22,14 @@ SkiWare/
 └── setup-gcp.sh             # One-time GCP bootstrap script (already run, don't re-run)
 ```
 
-**Target structure** once the backend and frontend are expanded:
+Current structure:
 ```
 SkiWare/
 ├── backend/
 │   ├── main.py              # FastAPI app entrypoint
-│   ├── routes/              # API route handlers
-│   ├── rag/                 # Embedding, retrieval, pgvector logic
-│   └── models.py            # Pydantic models for request/response validation
+│   ├── models.py            # Pydantic models for request/response validation
+│   ├── routers/             # API route handlers
+│   └── services/            # Business logic behind the API
 ├── frontend/                # React app (Create React App or Vite)
 │   ├── src/
 │   └── package.json
@@ -55,7 +58,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-python3 app/main.py
+python3 -m backend.main
 ```
 
 App runs at `http://localhost:8080`.
@@ -63,10 +66,12 @@ App runs at `http://localhost:8080`.
 ### Local Setup with Docker (matches production exactly)
 
 ```bash
-docker compose up
+docker compose up --build
 ```
 
-App runs at `http://localhost:8080`. The `app/` directory is volume-mounted so changes to `app/main.py` reflect immediately without rebuilding.
+Frontend runs at `http://localhost:5173`.
+Backend API runs at `http://localhost:8080`.
+The `backend/` and `frontend/` directories are volume-mounted so changes reflect immediately in local development.
 
 ---
 
@@ -75,7 +80,7 @@ App runs at `http://localhost:8080`. The `app/` directory is volume-mounted so c
 ### Workflow
 1. Pull the latest `main`
 2. Create a feature branch: `git checkout -b feature/your-feature-name`
-3. Make your changes in `app/main.py` (or add new files under `app/`)
+3. Make your changes under `backend/` or `frontend/`
 4. Test locally
 5. Open a PR against `main`
 
@@ -115,7 +120,7 @@ Deployment on `main` then:
 | Layer | Current | Target |
 |---|---|---|
 | Backend | Python / FastAPI | Python / FastAPI |
-| Frontend | Placeholder HTML page | React |
+| Frontend | React / Vite | React |
 | Server | Uvicorn | Uvicorn (FastAPI's async server) |
 | Container | Docker | Docker |
 | LLM | — | Gemini API (Google) |
@@ -127,17 +132,18 @@ Deployment on `main` then:
 
 ### Current Backend
 
-The initial Flask-to-FastAPI migration is complete. The current placeholder service provides:
+The initial Flask-to-FastAPI migration is complete. The current service provides:
 
 1. `GET /` returning the placeholder HTML page
 2. `GET /health` returning `{"status": "ok"}`
-3. Local and container startup through `uvicorn`
+3. `POST /api/assess` returning maintenance recommendations
+4. Local and container startup through `uvicorn`
 
 Next backend steps:
 
-1. Add request/response models with Pydantic
-2. Implement `POST /assess`
-3. Split routes, models, and RAG logic into separate modules as the app grows
+1. Replace placeholder assessment logic with RAG-backed recommendations
+2. Add backend modules for database and Gemini integrations
+3. Expand router coverage as the API surface grows
 
 ---
 
