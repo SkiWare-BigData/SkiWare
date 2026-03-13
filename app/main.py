@@ -1,6 +1,5 @@
 import os
 
-import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
@@ -44,5 +43,7 @@ async def health() -> dict[str, str]:
 
 
 if __name__ == "__main__":
+    from uvicorn import run
+
     port = int(os.environ.get("PORT", 8080))
-    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
+    run("app.main:app", host="0.0.0.0", port=port)
