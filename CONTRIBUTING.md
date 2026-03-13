@@ -9,7 +9,7 @@ SkiWare is an AI-powered ski damage assessment tool. Users input their ski detai
 ```
 SkiWare/
 ├── app/
-│   └── main.py              # Current: Flask placeholder — to be replaced with FastAPI
+│   └── main.py              # Current FastAPI placeholder backend
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml       # CI/CD — auto-deploys to GCP Cloud Run on push to main
@@ -19,7 +19,7 @@ SkiWare/
 └── setup-gcp.sh             # One-time GCP bootstrap script (already run, don't re-run)
 ```
 
-**Target structure** once the Flask → FastAPI + React migration is done:
+**Target structure** once the backend and frontend are expanded:
 ```
 SkiWare/
 ├── backend/
@@ -55,7 +55,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-python app/main.py
+python3 app/main.py
 ```
 
 App runs at `http://localhost:8080`.
@@ -92,7 +92,16 @@ pip install -r requirements.txt
 
 ### Deployment
 
-Deployment is fully automatic. Every push to `main` triggers the GitHub Actions workflow in `.github/workflows/deploy.yml` which:
+GitHub Actions now does two things:
+1. Runs CI on every PR to `main`
+2. Runs the same CI checks on `main` pushes, then deploys only if they pass
+
+CI currently validates:
+1. Python dependencies install cleanly
+2. The FastAPI placeholder passes smoke tests
+3. The Docker image builds successfully
+
+Deployment on `main` then:
 1. Builds a Docker image
 2. Pushes it to GCP Artifact Registry
 3. Deploys to GCP Cloud Run
@@ -105,9 +114,9 @@ Deployment is fully automatic. Every push to `main` triggers the GitHub Actions 
 
 | Layer | Current | Target |
 |---|---|---|
-| Backend | Python / Flask | Python / FastAPI |
-| Frontend | Flask placeholder | React |
-| Server | Gunicorn | Uvicorn (FastAPI's async server) |
+| Backend | Python / FastAPI | Python / FastAPI |
+| Frontend | Placeholder HTML page | React |
+| Server | Uvicorn | Uvicorn (FastAPI's async server) |
 | Container | Docker | Docker |
 | LLM | — | Gemini API (Google) |
 | Vector Database | — | pgvector on GCP Cloud SQL (PostgreSQL) |
@@ -116,20 +125,19 @@ Deployment is fully automatic. Every push to `main` triggers the GitHub Actions 
 | Container Registry | GCP Artifact Registry | GCP Artifact Registry |
 | CI/CD | GitHub Actions | GitHub Actions |
 
-### Migrating from Flask to FastAPI
+### Current Backend
 
-When you're ready to make the switch:
+The initial Flask-to-FastAPI migration is complete. The current placeholder service provides:
 
-1. Replace `flask` and `gunicorn` in `requirements.txt` with `fastapi` and `uvicorn[standard]`
-2. Rewrite `app/main.py` — routing syntax is nearly identical:
-   ```python
-   # Flask              →   FastAPI
-   @app.route("/")      →   @app.get("/")
-   @app.route("/assess", methods=["POST"])  →  @app.post("/assess")
-   ```
-3. Define Pydantic models for request/response validation (replaces manual `request.json` parsing)
-4. Update the Dockerfile `CMD` from `gunicorn ... app.main:app` to `uvicorn app.main:app --host 0.0.0.0 --port 8080`
-5. Test locally, then open a PR
+1. `GET /` returning the placeholder HTML page
+2. `GET /health` returning `{"status": "ok"}`
+3. Local and container startup through `uvicorn`
+
+Next backend steps:
+
+1. Add request/response models with Pydantic
+2. Implement `POST /assess`
+3. Split routes, models, and RAG logic into separate modules as the app grows
 
 ---
 
