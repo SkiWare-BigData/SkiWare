@@ -52,7 +52,7 @@ A free web application where users input their ski info and describe their issue
 | Layer | Technology |
 |---|---|
 | Backend | Python / FastAPI |
-| Frontend | Placeholder HTML page (React planned) |
+| Frontend | React / Vite |
 | LLM | Gemini API (Google) |
 | Vector Database | pgvector on GCP Cloud SQL (PostgreSQL) |
 | Data Collection | GCP Cloud Run Jobs (scheduled Python agent) |
@@ -70,7 +70,7 @@ A free web application where users input their ski info and describe their issue
 | Container Registry | GCP Artifact Registry | GCP Artifact Registry |
 | CI/CD | GitHub Actions | GitHub Actions |
 
-> **Note:** The backend now runs on FastAPI as a lightweight placeholder while the broader API and React frontend are built out. See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup and next steps.
+> **Note:** The backend runs on FastAPI and the React frontend runs through Vite in local Docker development. See [CONTRIBUTING.md](CONTRIBUTING.md) for the current workflow.
 
 ---
 
@@ -80,12 +80,12 @@ A free web application where users input their ski info and describe their issue
 User Browser
      │
      ▼
-React Frontend          ← target
+React Frontend          ← current local UI
      │ JSON over HTTP
      ▼
 FastAPI Backend         ← current placeholder
      │
-     ├── POST /assess
+     ├── POST /api/assess
      │     ├── Embed user input
      │     ├── Query pgvector (retrieve relevant ski/repair context)
      │     └── Gemini API (LLM generates response with context)
@@ -107,6 +107,16 @@ Cloud SQL (PostgreSQL + pgvector)
 ---
 
 ## Features
+
+Current backend layout:
+
+```
+backend/
+├── main.py
+├── models.py
+├── routers/
+└── services/
+```
 
 ### MVP
 | Feature | Description |
@@ -133,7 +143,7 @@ Cloud SQL (PostgreSQL + pgvector)
 | Feature | Description |
 |---|---|
 | Photo upload | Vision model classifies damage type from a photo |
-| React frontend | Richer UI, better mobile experience |
+| React frontend polish | Richer UI, better mobile experience |
 | Community repair logs | "47 people fixed this on a Rossignol Experience 88 — here's what worked" |
 | Ski shop dashboard | Shop-facing version for quote generation and work orders |
 
@@ -152,7 +162,7 @@ Cloud SQL (PostgreSQL + pgvector)
 
 ### MVP
 - [x] Migrate backend from Flask → FastAPI
-- [ ] Build React frontend with ski info input modal
+- [x] Build React frontend with ski info input modal
 - [ ] Gemini API integration with structured response (safety flag, severity, cost estimate, time/skill, instructions, parts, YouTube links)
 - [ ] Basic RAG pipeline with pgvector
 - [ ] Initial knowledge base seeded manually
@@ -167,7 +177,7 @@ Cloud SQL (PostgreSQL + pgvector)
 
 ### v2
 - [ ] Vision model for photo-based damage classification
-- [ ] React frontend
+- [x] React frontend
 - [ ] Community repair logs
 - [ ] Ski shop dashboard
 

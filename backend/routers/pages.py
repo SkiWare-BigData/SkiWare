@@ -1,10 +1,8 @@
-import os
-
-from fastapi import FastAPI
+from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 
 
-app = FastAPI(title="SkiWare")
+router = APIRouter()
 
 
 ROOT_PAGE = """
@@ -25,25 +23,18 @@ ROOT_PAGE = """
     <div class="card">
         <h1>Hello World!</h1>
         <p>Running on <code>Cloud Run</code></p>
-        <p style="font-size:0.85rem; color:#999;">Edit <code>app/main.py</code> &rarr; push to GitHub &rarr; auto-deploys</p>
+        <p style="font-size:0.85rem; color:#999;">Edit <code>backend/</code> and push to GitHub to auto-deploy</p>
     </div>
 </body>
 </html>
 """
 
 
-@app.get("/", response_class=HTMLResponse)
+@router.get("/", response_class=HTMLResponse)
 async def hello() -> str:
     return ROOT_PAGE
 
 
-@app.get("/health")
+@router.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
-
-
-if __name__ == "__main__":
-    from uvicorn import run
-
-    port = int(os.environ.get("PORT", 8080))
-    run("app.main:app", host="0.0.0.0", port=port)
