@@ -84,18 +84,33 @@ gcloud iam workload-identity-pools create "$POOL_NAME" \
   --location="global" \
   --display-name="GitHub Actions Pool"
 
-# Create OIDC provider
-gcloud iam workload-identity-pools providers describe "$PROVIDER_NAME" \
+PROVIDER_EXISTS=false
+if gcloud iam workload-identity-pools providers describe "$PROVIDER_NAME" \
   --workload-identity-pool="$POOL_NAME" \
-  --location="global" 2>/dev/null || \
-gcloud iam workload-identity-pools providers create-oidc "$PROVIDER_NAME" \
-  --workload-identity-pool="$POOL_NAME" \
-  --location="global" \
-  --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
-  --attribute-condition="assertion.repository=='${GITHUB_REPO}'"
+  --location="global" >/dev/null 2>&1; then
+  PROVIDER_EXISTS=true
+fi
+
+if [ "$PROVIDER_EXISTS" = true ]; then
+  echo "→ Updating OIDC provider for repository ${GITHUB_REPO}..."
+  gcloud iam workload-identity-pools providers update-oidc "$PROVIDER_NAME" \
+    --workload-identity-pool="$POOL_NAME" \
+    --location="global" \
+    --issuer-uri="https://token.actions.githubusercontent.com" \
+    --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+    --attribute-condition="assertion.repository=='${GITHUB_REPO}'"
+else
+  echo "→ Creating OIDC provider..."
+  gcloud iam workload-identity-pools providers create-oidc "$PROVIDER_NAME" \
+    --workload-identity-pool="$POOL_NAME" \
+    --location="global" \
+    --issuer-uri="https://token.actions.githubusercontent.com" \
+    --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+    --attribute-condition="assertion.repository=='${GITHUB_REPO}'"
+fi
 
 # Allow the GitHub repo to impersonate the SA
+echo "→ Granting Workload Identity access to ${GITHUB_REPO}..."
 gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL" \
   --role="roles/iam.workloadIdentityUser" \
   --member="principalSet://iam.googleapis.com/$(
@@ -103,6 +118,11 @@ gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL" \
       --location="global" --format="value(name)"
   )/attribute.repository/${GITHUB_REPO}" \
   --quiet
+
+echo ""
+echo "NOTE: If this repo was renamed or moved, remove any old"
+echo "Workload Identity bindings that still reference the previous"
+echo "GitHub owner/repo path."
 
 # ── Print GitHub Secrets ────────────────────────────────────────────
 WIF_PROVIDER=$(gcloud iam workload-identity-pools providers describe "$PROVIDER_NAME" \

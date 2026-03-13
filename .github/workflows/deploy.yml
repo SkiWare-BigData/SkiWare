@@ -1,6 +1,8 @@
-name: Build & Deploy to Cloud Run
+name: CI and Deploy to Cloud Run
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
 
@@ -11,7 +13,33 @@ env:
   REPO_NAME: cloud-run-apps
 
 jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      - name: Run tests
+        run: pytest
+
+      - name: Validate Docker build
+        run: docker build -t skiaware-ci .
+
   deploy:
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -12,7 +12,7 @@ SkiWare/
 │   └── main.py              # Current: Flask placeholder — to be replaced with FastAPI
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml       # CI/CD — auto-deploys to GCP Cloud Run on push to main
+│       └── deploy.yml       # CI on PRs and deploys passing main pushes to GCP Cloud Run
 ├── Dockerfile               # Container definition
 ├── docker-compose.yml       # Local development setup
 ├── requirements.txt         # Python dependencies
@@ -92,7 +92,16 @@ pip install -r requirements.txt
 
 ### Deployment
 
-Deployment is fully automatic. Every push to `main` triggers the GitHub Actions workflow in `.github/workflows/deploy.yml` which:
+GitHub Actions now does two things:
+1. Runs CI on every PR to `main`
+2. Runs the same CI checks on `main` pushes, then deploys only if they pass
+
+CI currently validates:
+1. Python dependencies install cleanly
+2. The Flask placeholder passes smoke tests
+3. The Docker image builds successfully
+
+Deployment on `main` then:
 1. Builds a Docker image
 2. Pushes it to GCP Artifact Registry
 3. Deploys to GCP Cloud Run
@@ -150,4 +159,4 @@ Any secrets should be added as GitHub Actions secrets and passed to Cloud Run vi
 - Keep PRs focused — one feature or fix per PR
 - Test locally before opening a PR
 - PRs require at least one approval before merging to `main`
-- Merging to `main` = deploying to production
+- Merging to `main` triggers CI and then deploys to production if CI passes
