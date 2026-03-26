@@ -1,6 +1,6 @@
 import Header from '../components/Header';
 
-export default function ResultsPage({ formData, results, onBackToHome, onNewAssessment }) {
+export default function ResultsPage({ formData, results, onBackToHome, onNewAssessment, onFindShop }) {
   if (!results) {
     return <div>Loading...</div>;
   }
@@ -9,7 +9,7 @@ export default function ResultsPage({ formData, results, onBackToHome, onNewAsse
 
   return (
     <div className="app">
-      <Header />
+      <Header onFindShop={onFindShop} />
       <div className="main-container">
         <div className="results-page">
           {/* Assessment Summary */}

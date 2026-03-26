@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Header from '../components/Header';
 
-export default function FormPage({ onSubmit, onCancel }) {
+export default function FormPage({ onSubmit, onCancel, onFindShop }) {
   const [formData, setFormData] = useState({
     equipmentType: 'skis',
     brand: '',
@@ -41,7 +41,7 @@ export default function FormPage({ onSubmit, onCancel }) {
 
   return (
     <div className="app">
-      <Header />
+      <Header onFindShop={onFindShop} />
       <div className="main-container">
         <div className="form-page">
           <form onSubmit={handleSubmit}>

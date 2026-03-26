@@ -1,9 +1,9 @@
 import Header from '../components/Header';
 
-export default function HomePage({ onStartAssessment }) {
+export default function HomePage({ onStartAssessment, onFindShop }) {
   return (
     <div className="app">
-      <Header />
+      <Header onFindShop={onFindShop} />
       <div className="main-container">
         <div className="home-page">
           <div className="hero">

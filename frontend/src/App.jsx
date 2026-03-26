@@ -3,6 +3,7 @@ import './App.css';
 import HomePage from './pages/HomePage';
 import FormPage from './pages/FormPage';
 import ResultsPage from './pages/ResultsPage';
+import FindShopPage from './pages/FindShopPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -11,6 +12,10 @@ function App() {
 
   const handleStartAssessment = () => {
     setCurrentPage('form');
+  };
+
+  const handleFindShop = () => {
+    setCurrentPage('findShop');
   };
 
   const handleFormSubmit = async (data) => {
@@ -60,10 +65,10 @@ function App() {
   return (
     <div className="app">
       {currentPage === 'home' && (
-        <HomePage onStartAssessment={handleStartAssessment} />
+        <HomePage onStartAssessment={handleStartAssessment} onFindShop={handleFindShop} />
       )}
       {currentPage === 'form' && (
-        <FormPage onSubmit={handleFormSubmit} onCancel={handleBackToHome} />
+        <FormPage onSubmit={handleFormSubmit} onCancel={handleBackToHome} onFindShop={handleFindShop} />
       )}
       {currentPage === 'results' && (
         <ResultsPage 
@@ -71,7 +76,11 @@ function App() {
           results={results}
           onBackToHome={handleBackToHome}
           onNewAssessment={handleNewAssessment}
+          onFindShop={handleFindShop}
         />
+      )}
+      {currentPage === 'findShop' && (
+        <FindShopPage onBackToHome={handleBackToHome} onFindShop={handleFindShop} />
       )}
     </div>
   );
