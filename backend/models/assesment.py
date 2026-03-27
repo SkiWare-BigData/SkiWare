@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from backend.models.recommendation import Recommendation
+
 
 class AssessmentRequest(BaseModel):
     equipmentType: Literal["skis", "snowboard"] = "skis"
@@ -23,12 +25,6 @@ class AssessmentRequest(BaseModel):
         if value == "":
             return None
         return value
-
-
-class Recommendation(BaseModel):
-    title: str
-    severity: Literal["LOW", "MEDIUM", "HIGH"]
-    description: str
 
 
 class AssessmentResponse(BaseModel):

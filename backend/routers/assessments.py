@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from backend.models import AssessmentRequest, AssessmentResponse
+from backend.models.assesment import AssessmentRequest, AssessmentResponse
 from backend.services.assessment import build_assessment_response
 
 
