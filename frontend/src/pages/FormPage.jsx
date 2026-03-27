@@ -1,86 +1,153 @@
 import { useState } from 'react';
-import Header from '../components/Header';
+
+const snowTypeOptions = [
+  { value: 'powder', label: 'Powder' },
+  { value: 'ice', label: 'Ice' },
+  { value: 'hybrid', label: 'Hybrid' },
+];
+
+const difficultyOptions = [
+  { value: 'easy', label: 'Easy' },
+  { value: 'medium', label: 'Intermediate' },
+  { value: 'hard', label: 'Advanced' },
+  { value: 'Expert', label: 'Expert' },
+  { value: 'Park', label: 'Park/Freestyle' },
+];
+
+const terrainTypeOptions = [
+  { value: 'groomed', label: 'Groomed' },
+  { value: 'ungroomed', label: 'Ungroomed' },
+  { value: 'hybrid', label: 'Hybrid' },
+];
+
+const equipmentAgeOptions = [
+  { value: '0-1 year', label: '0-1 years old' },
+  { value: '1-2 years', label: '1-2 years old' },
+  { value: '2-5 years', label: '2-5 years old' },
+  { value: '5+ years', label: '5+ years old' },
+];
 
 export default function FormPage({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
-    equipmentType: 'skis',
+    equipmentType: '',
     brand: '',
     length: '',
-    age: '1-2 years',
-    terrain: 'hybrid',
-    style: 'both',
-    daysSinceWax: 5,
-    daysSinceEdgeWork: 10,
+    age: '',
+    terrain: '',
+    difficulty: '',
+    style: '',
+    daysSinceWax: 0,
+    daysSinceEdgeWork: 0,
     coreShots: 0,
     height: '',
     weight: '',
     issueDescription: '',
   });
 
-  const handleChange = (e) => {
-    const { name, value, type } = e.target;
-    setFormData(prev => ({
+  const handleChange = (event) => {
+    const { name, value, type } = event.target;
+
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'number' ? parseInt(value) : value,
+      [name]: type === 'number' ? (value === '' ? '' : parseInt(value, 10)) : value,
     }));
   };
 
-  const handleSliderChange = (e) => {
-    const { name, value } = e.target;
-    const numValue = parseInt(value);
-    setFormData(prev => ({
+  const handleSliderChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((prev) => ({
       ...prev,
-      [name]: numValue,
+      [name]: parseInt(value, 10),
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = (event) => {
+    event.preventDefault();
     onSubmit(formData);
   };
 
   return (
-    <div className="app">
-      <Header />
-      <div className="main-container">
-        <div className="form-page">
-          <form onSubmit={handleSubmit}>
-            {/* Equipment Type */}
-            <div className="form-section">
-              <div className="form-section-title">Equipment Type</div>
-              <div className="form-section-subtitle">What are you riding?</div>
-              
-              <div className="radio-group">
-                <div className="radio-option">
-                  <input
-                    type="radio"
-                    id="skis"
-                    name="equipmentType"
-                    value="skis"
-                    checked={formData.equipmentType === 'skis'}
-                    onChange={handleChange}
-                  />
-                  <label htmlFor="skis" className="radio-label">Skis</label>
-                </div>
-                <div className="radio-option">
-                  <input
-                    type="radio"
-                    id="snowboard"
-                    name="equipmentType"
-                    value="snowboard"
-                    checked={formData.equipmentType === 'snowboard'}
-                    onChange={handleChange}
-                  />
-                  <label htmlFor="snowboard" className="radio-label">Snowboard</label>
-                </div>
-              </div>
+    <main className="main-container">
+      <section className="form-page">
+        <form onSubmit={handleSubmit} className="assessment-form">
+          <div className="form-section">
+            <div className="form-section-title">Equipment Type</div>
+            <div className="form-section-subtitle">What are you riding?</div>
+            <div className="segmented-grid equipment-grid">
+              <TileOption
+                name="equipmentType"
+                value="skis"
+                checked={formData.equipmentType === 'skis'}
+                onChange={handleChange}
+                label="Skis"
+              />
+              <TileOption
+                name="equipmentType"
+                value="snowboard"
+                checked={formData.equipmentType === 'snowboard'}
+                onChange={handleChange}
+                label="Snowboard"
+              />
             </div>
+          </div>
 
-            {/* Equipment Details */}
-            <div className="form-section">
-              <div className="form-section-title">Equipment Details</div>
-              <div className="form-section-subtitle">Tell us about your gear</div>
+          <div className="form-section">
+            <div className="form-section-title">Snow Type &amp; Terrain</div>
+            <div className="form-section-subtitle">What conditions do you typically ride?</div>
 
+            <Fieldset title="Snow Type">
+              <div className="segmented-grid triple-grid">
+                {snowTypeOptions.map((option) => (
+                  <TileOption
+                    key={option.value}
+                    name="terrain"
+                    value={option.value}
+                    checked={formData.terrain === option.value}
+                    onChange={handleChange}
+                    label={option.label}
+                  />
+                ))}
+              </div>
+            </Fieldset>
+
+            <Fieldset title="Difficulty Level">
+              <div className="segmented-grid difficulty-grid">
+                {difficultyOptions.map((option) => (
+                  <TileOption
+                    key={option.value}
+                    name="difficulty"
+                    value={option.value}
+                    checked={formData.difficulty === option.value}
+                    onChange={handleChange}
+                    label={option.label}
+                    compact
+                  />
+                ))}
+              </div>
+            </Fieldset>
+
+            <Fieldset title="Terrain Type">
+              <div className="segmented-grid triple-grid">
+                {terrainTypeOptions.map((option) => (
+                  <TileOption
+                    key={option.value}
+                    name="style"
+                    value={option.value}
+                    checked={formData.style === option.value}
+                    onChange={handleChange}
+                    label={option.label}
+                  />
+                ))}
+              </div>
+            </Fieldset>
+          </div>
+
+          <div className="form-section">
+            <div className="form-section-title">Equipment Details</div>
+            <div className="form-section-subtitle">Tell us about your gear</div>
+
+            <div className="input-grid">
               <div className="form-group">
                 <label htmlFor="brand">Brand</label>
                 <input
@@ -89,7 +156,7 @@ export default function FormPage({ onSubmit, onCancel }) {
                   name="brand"
                   value={formData.brand}
                   onChange={handleChange}
-                  placeholder="e.g., Rossignol, Burton, K2"
+                  placeholder="Rossignol, Burton, K2"
                 />
               </div>
 
@@ -101,180 +168,28 @@ export default function FormPage({ onSubmit, onCancel }) {
                   name="length"
                   value={formData.length}
                   onChange={handleChange}
-                  placeholder="e.g., 170"
+                  placeholder="e.g. 170"
                 />
               </div>
-
-              <div className="form-group">
-                <label htmlFor="age">Equipment Age</label>
-                <select
-                  id="age"
-                  name="age"
-                  value={formData.age}
-                  onChange={handleChange}
-                >
-                  <option value="0-1 year">0-1 year old</option>
-                  <option value="1-2 years">1-2 years old</option>
-                  <option value="2-5 years">2-5 years old</option>
-                  <option value="5+ years">5+ years old</option>
-                </select>
-              </div>
             </div>
 
-            {/* Riding Preferences */}
-            <div className="form-section">
-              <div className="form-section-title">Riding Preferences</div>
-              <div className="form-section-subtitle">How and where do you ride?</div>
-
-              <div className="form-group">
-                <label>Terrain Preference</label>
-                <div className="radio-group">
-                  <div className="radio-option">
-                    <input
-                      type="radio"
-                      id="powder"
-                      name="terrain"
-                      value="powder"
-                      checked={formData.terrain === 'powder'}
-                      onChange={handleChange}
-                    />
-                    <label htmlFor="powder" className="radio-label">Powder</label>
-                  </div>
-                  <div className="radio-option">
-                    <input
-                      type="radio"
-                      id="ice-hardpack"
-                      name="terrain"
-                      value="ice-hardpack"
-                      checked={formData.terrain === 'ice-hardpack'}
-                      onChange={handleChange}
-                    />
-                    <label htmlFor="ice-hardpack" className="radio-label">Ice/Hardpack</label>
-                  </div>
-                  <div className="radio-option">
-                    <input
-                      type="radio"
-                      id="hybrid"
-                      name="terrain"
-                      value="hybrid"
-                      checked={formData.terrain === 'hybrid'}
-                      onChange={handleChange}
-                    />
-                    <label htmlFor="hybrid" className="radio-label">Hybrid (All conditions)</label>
-                  </div>
-                  <div className="radio-option">
-                    <input
-                      type="radio"
-                      id="park-rails"
-                      name="terrain"
-                      value="park-rails"
-                      checked={formData.terrain === 'park-rails'}
-                      onChange={handleChange}
-                    />
-                    <label htmlFor="park-rails" className="radio-label">Park/Rails</label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Skiing Style</label>
-                <div className="radio-group">
-                  <div className="radio-option">
-                    <input
-                      type="radio"
-                      id="on-piste"
-                      name="style"
-                      value="on-piste"
-                      checked={formData.style === 'on-piste'}
-                      onChange={handleChange}
-                    />
-                    <label htmlFor="on-piste" className="radio-label">On-Piste (Groomed runs)</label>
-                  </div>
-                  <div className="radio-option">
-                    <input
-                      type="radio"
-                      id="off-piste"
-                      name="style"
-                      value="off-piste"
-                      checked={formData.style === 'off-piste'}
-                      onChange={handleChange}
-                    />
-                    <label htmlFor="off-piste" className="radio-label">Off-Piste (Backcountry)</label>
-                  </div>
-                  <div className="radio-option">
-                    <input
-                      type="radio"
-                      id="both"
-                      name="style"
-                      value="both"
-                      checked={formData.style === 'both'}
-                      onChange={handleChange}
-                    />
-                    <label htmlFor="both" className="radio-label">Both</label>
-                  </div>
-                </div>
-              </div>
+            <div className="form-group">
+              <label htmlFor="age">Equipment Age</label>
+              <select id="age" name="age" value={formData.age} onChange={handleChange}>
+                {equipmentAgeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
-
-            {/* Maintenance History */}
-            <div className="form-section">
-              <div className="form-section-title">Maintenance History</div>
-              <div className="form-section-subtitle">When did you last service your gear?</div>
-
-              <div className="form-group">
-                <label htmlFor="wax">Days of riding since last wax: {formData.daysSinceWax}</label>
-                <div className="slider-container">
-                  <input
-                    type="range"
-                    id="wax"
-                    name="daysSinceWax"
-                    min="0"
-                    max="30"
-                    value={formData.daysSinceWax}
-                    onChange={handleSliderChange}
-                    style={{ '--slider-fill': `${(formData.daysSinceWax / 30) * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="edge">Days of riding since last edge sharpening: {formData.daysSinceEdgeWork}</label>
-                <div className="slider-container">
-                  <input
-                    type="range"
-                    id="edge"
-                    name="daysSinceEdgeWork"
-                    min="0"
-                    max="30"
-                    value={formData.daysSinceEdgeWork}
-                    onChange={handleSliderChange}
-                    style={{ '--slider-fill': `${(formData.daysSinceEdgeWork / 30) * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="coreShots">Number of core shots (visible damage): {formData.coreShots}</label>
-                <div className="slider-container">
-                  <input
-                    type="range"
-                    id="coreShots"
-                    name="coreShots"
-                    min="0"
-                    max="10"
-                    value={formData.coreShots}
-                    onChange={handleSliderChange}
-                    style={{ '--slider-fill': `${(formData.coreShots / 10) * 100}%` }}
-                  />
-                </div>
-              </div>
+          </div>
+          <div className="form-section">
+            <div className="form-section-title">Rider Info</div>
+            <div className="form-section-subtitle">
+              Helps us provide better recommendations
             </div>
-
-            {/* Rider Info */}
-            <div className="form-section">
-              <div className="form-section-title">Rider Info (Optional)</div>
-              <div className="form-section-subtitle">Helps us provide better recommendations</div>
-
+            <div className="input-grid">
               <div className="form-group">
                 <label htmlFor="height">Height (cm)</label>
                 <input
@@ -283,7 +198,7 @@ export default function FormPage({ onSubmit, onCancel }) {
                   name="height"
                   value={formData.height}
                   onChange={handleChange}
-                  placeholder="e.g., 175"
+                  placeholder="e.g. 175"
                 />
               </div>
 
@@ -295,23 +210,103 @@ export default function FormPage({ onSubmit, onCancel }) {
                   name="weight"
                   value={formData.weight}
                   onChange={handleChange}
-                  placeholder="e.g., 70"
+                  placeholder="e.g. 70"
                 />
               </div>
             </div>
+          </div>
 
-            {/* Form Buttons */}
-            <div className="form-buttons">
-              <button type="button" className="btn-secondary" onClick={onCancel}>
-                Cancel
-              </button>
-              <button type="submit" className="btn-primary">
-                Get Recommendations →
-              </button>
-            </div>
-          </form>
-        </div>
+          <div className="form-section">
+            <div className="form-section-title">Maintenance History</div>
+            <div className="form-section-subtitle">When did you last service your gear?</div>
+
+            <SliderField
+              id="daysSinceWax"
+              name="daysSinceWax"
+              label="Days of riding since last wax"
+              value={formData.daysSinceWax}
+              max={30}
+              onChange={handleSliderChange}
+            />
+
+            <SliderField
+              id="daysSinceEdgeWork"
+              name="daysSinceEdgeWork"
+              label="Days of riding since last edge sharpening"
+              value={formData.daysSinceEdgeWork}
+              max={30}
+              onChange={handleSliderChange}
+            />
+
+            <SliderField
+              id="coreShots"
+              name="coreShots"
+              label="Number of core shots (visible damage)"
+              value={formData.coreShots}
+              max={10}
+              onChange={handleSliderChange}
+            />
+          </div>
+
+          <div className="form-buttons">
+            <button type="button" className="btn-secondary" onClick={onCancel}>
+              Back
+            </button>
+            <button type="submit" className="btn-primary">
+              Get Recommendations
+            </button>
+          </div>
+        </form>
+      </section>
+    </main>
+  );
+}
+
+function Fieldset({ title, children }) {
+  return (
+    <div className="choice-group">
+      <div className="choice-group-title">{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function TileOption({ name, value, checked, onChange, label, compact = false }) {
+  const id = `${name}-${value}`;
+
+  return (
+    <label htmlFor={id} className={`tile-option ${checked ? 'selected' : ''} ${compact ? 'compact' : ''}`}>
+      <input
+        className="sr-only"
+        type="radio"
+        id={id}
+        name={name}
+        value={value}
+        checked={checked}
+        onChange={onChange}
+      />
+      <span>{label}</span>
+    </label>
+  );
+}
+
+function SliderField({ id, name, label, value, max, onChange }) {
+  return (
+    <div className="form-group slider-field">
+      <div className="slider-label-row">
+        <label htmlFor={id}>{label}</label>
+        <span className="slider-value">{value}</span>
       </div>
+      <input
+        type="range"
+        id={id}
+        name={name}
+        min="0"
+        max={max}
+        value={value}
+        onChange={onChange}
+        style={{ '--slider-fill': `${(value / max) * 100}%` }}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import './App.css';
+import Header from './components/Header';
 import HomePage from './pages/HomePage';
 import FormPage from './pages/FormPage';
 import ResultsPage from './pages/ResultsPage';
@@ -9,17 +10,26 @@ function App() {
   const [formData, setFormData] = useState(null);
   const [results, setResults] = useState(null);
 
+  const handleNavigate = (page) => {
+    if (page === 'myfit') {
+      return;
+    }
+
+    if (page === 'home') {
+      handleBackToHome();
+      return;
+    }
+
+    setCurrentPage(page);
+  };
+
   const handleStartAssessment = () => {
     setCurrentPage('form');
   };
 
   const handleFormSubmit = async (data) => {
     setFormData(data);
-    // In a real app, this would call the backend API
-    // For now, we'll just go to results with mock data
-    console.log('Form submitted:', data);
-    
-    // Mock API call - replace with actual backend call
+
     try {
       const response = await fetch('/api/assess', {
         method: 'POST',
@@ -28,20 +38,17 @@ function App() {
         },
         body: JSON.stringify(data),
       });
-      
+
       if (response.ok) {
-        const result = await response.json();
-        setResults(result);
+        setResults(await response.json());
       } else {
-        // For demo purposes, use mock results
         setResults(getMockResults(data));
       }
     } catch (error) {
-      console.error('Error:', error);
-      // Use mock results if API fails
+      console.error('Assessment request failed', error);
       setResults(getMockResults(data));
     }
-    
+
     setCurrentPage('results');
   };
 
@@ -53,20 +60,18 @@ function App() {
 
   const handleNewAssessment = () => {
     setCurrentPage('form');
-    setFormData(null);
     setResults(null);
   };
 
   return (
     <div className="app">
-      {currentPage === 'home' && (
-        <HomePage onStartAssessment={handleStartAssessment} />
-      )}
+      <Header currentPage={currentPage} onNavigate={handleNavigate} />
+      {currentPage === 'home' && <HomePage onStartAssessment={handleStartAssessment} />}
       {currentPage === 'form' && (
         <FormPage onSubmit={handleFormSubmit} onCancel={handleBackToHome} />
       )}
       {currentPage === 'results' && (
-        <ResultsPage 
+        <ResultsPage
           formData={formData}
           results={results}
           onBackToHome={handleBackToHome}
@@ -78,6 +83,42 @@ function App() {
 }
 
 function getMockResults(data) {
+  const recommendations = [];
+
+  if (data.age === '5+ years') {
+    recommendations.push({
+      title: 'Consider Equipment Inspection',
+      severity: 'MEDIUM',
+      description:
+        'Your gear is 5+ years old. Check bindings for wear, inspect for delamination, and consider a full tune-up before the next trip.',
+    });
+  }
+
+  if (data.daysSinceWax >= 5) {
+    recommendations.push({
+      title: 'Waxing Recommended Soon',
+      severity: 'LOW',
+      description: `You are at ${data.daysSinceWax} days since waxing. Plan to wax within the next few sessions to maintain optimal glide.`,
+    });
+  }
+
+  if (data.daysSinceEdgeWork >= 10) {
+    recommendations.push({
+      title: 'Tune Edges for Better Hold',
+      severity: 'MEDIUM',
+      description: `At ${data.daysSinceEdgeWork} riding days since edge work, edge grip may start dropping off on firm or mixed snow.`,
+    });
+  }
+
+  if (recommendations.length === 0) {
+    recommendations.push({
+      title: 'Maintenance Looks On Track',
+      severity: 'LOW',
+      description:
+        'Your reported maintenance schedule looks healthy. Keep drying and checking your edges after each day out.',
+    });
+  }
+
   return {
     equipmentType: data.equipmentType,
     brand: data.brand,
@@ -85,13 +126,7 @@ function getMockResults(data) {
     style: data.style,
     daysSinceWax: data.daysSinceWax,
     daysSinceEdgeWork: data.daysSinceEdgeWork,
-    recommendations: [
-      {
-        title: 'Waxing Recommended Soon',
-        severity: 'LOW',
-        description: `You're at ${data.daysSinceWax} days since waxing. Plan to wax within the next few sessions to maintain optimal glide.`,
-      },
-    ],
+    recommendations,
     tips: [
       'Wax your skis every 5-7 days of riding',
       'Check edges for burrs after every session, especially on hard snow',
