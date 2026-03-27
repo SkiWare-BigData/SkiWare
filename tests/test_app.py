@@ -1,7 +1,10 @@
+from datetime import date
+
 import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import app
+from backend.services.calculate_DIN import calculate_din
 from backend.services.users import reset_user_store
 
 
@@ -11,6 +14,27 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def clear_user_store() -> None:
     reset_user_store()
+
+
+def _age_for_birthday(birthday: date) -> int:
+    today = date.today()
+    return today.year - birthday.year - ((today.month, today.day) < (birthday.month, birthday.day))
+
+
+def _valid_user_payload(*, name: str, email: str, weight_kg: float = 68.5, height_cm: float = 172) -> dict[str, object]:
+    return {
+        "name": name,
+        "email": email,
+        "sport": "Skier",
+        "skillLevel": "advanced",
+        "preferredEquipment": "skis",
+        "preferredTerrain": "powder",
+        "skierType": 3,
+        "birthday": "1998-02-14",
+        "weightKg": weight_kg,
+        "heightCm": height_cm,
+        "bootSoleLengthMm": 295,
+    }
 
 
 def test_assess_endpoint_returns_recommendations():
@@ -64,24 +88,43 @@ def test_assess_endpoint_accepts_blank_optional_numeric_fields():
 
 
 def test_user_router_supports_crud_flow():
-    create_response = client.post(
-        "/api/users",
+    birthday = date(1998, 2, 14)
+    create_response = client.put(
+        "/api/users/ava-sender",
         json={
             "name": "Ava Sender",
             "email": "AVA@EXAMPLE.COM",
+            "sport": "Skier",
             "skillLevel": "advanced",
             "preferredEquipment": "skis",
             "preferredTerrain": "powder",
+            "skierType": 3,
+            "birthday": birthday.isoformat(),
+            "weightKg": 68.5,
+            "heightCm": 172,
+            "bootSoleLengthMm": 295,
         },
     )
 
     assert create_response.status_code == 201
 
     created_user = create_response.json()
-    user_id = created_user["id"]
+    user_id = "ava-sender"
 
     assert created_user["email"] == "ava@example.com"
+    assert created_user["sport"] == "Skier"
     assert created_user["skillLevel"] == "advanced"
+    assert created_user["skierType"] == 3
+    assert created_user["birthday"] == birthday.isoformat()
+    assert created_user["weightKg"] == 68.5
+    assert created_user["heightCm"] == 172.0
+    assert created_user["bootSoleLengthMm"] == 295
+    assert created_user["DIN"] == calculate_din(
+        weight=68.5,
+        boot_sole_length_mm=295,
+        age=_age_for_birthday(birthday),
+        skier_type=3,
+    )
 
     list_response = client.get("/api/users")
     assert list_response.status_code == 200
@@ -91,16 +134,43 @@ def test_user_router_supports_crud_flow():
     assert detail_response.status_code == 200
     assert detail_response.json()["name"] == "Ava Sender"
 
-    update_response = client.patch(
+    update_response = client.put(
         f"/api/users/{user_id}",
         json={
+            "name": "Ava Sender",
+            "email": "ava@example.com",
+            "sport": "Skier",
+            "skillLevel": "advanced",
             "preferredEquipment": "both",
             "preferredTerrain": "backcountry",
+            "skierType": 3,
+            "birthday": birthday.isoformat(),
+            "weightKg": 72,
+            "heightCm": 174,
+            "bootSoleLengthMm": 295,
         },
     )
     assert update_response.status_code == 200
+    assert update_response.json()["sport"] == "Skier"
     assert update_response.json()["preferredEquipment"] == "both"
     assert update_response.json()["preferredTerrain"] == "backcountry"
+    assert update_response.json()["weightKg"] == 72.0
+    assert update_response.json()["heightCm"] == 174.0
+    assert update_response.json()["DIN"] == calculate_din(
+        weight=72,
+        boot_sole_length_mm=295,
+        age=_age_for_birthday(birthday),
+        skier_type=3,
+    )
+
+    updated_detail_response = client.get(f"/api/users/{user_id}")
+    assert updated_detail_response.status_code == 200
+    assert updated_detail_response.json()["DIN"] == calculate_din(
+        weight=72,
+        boot_sole_length_mm=295,
+        age=_age_for_birthday(birthday),
+        skier_type=3,
+    )
 
     delete_response = client.delete(f"/api/users/{user_id}")
     assert delete_response.status_code == 204
@@ -111,12 +181,142 @@ def test_user_router_supports_crud_flow():
 
 
 def test_user_router_rejects_invalid_email():
-    response = client.post(
-        "/api/users",
+    response = client.put(
+        "/api/users/taylor-ridge",
         json={
             "name": "Taylor Ridge",
             "email": "not-an-email",
+            "skierType": 2,
+            "birthday": "1996-08-09",
+            "weightKg": 70,
+            "heightCm": 175,
+            "bootSoleLengthMm": 300,
         },
     )
 
     assert response.status_code == 422
+
+
+def test_user_router_rejects_future_birthday():
+    response = client.put(
+        "/api/users/mika-summit",
+        json={
+            "name": "Mika Summit",
+            "email": "mika@example.com",
+            "sport": "Skier",
+            "skillLevel": "intermediate",
+            "preferredEquipment": "skis",
+            "preferredTerrain": "hybrid",
+            "skierType": 2,
+            "birthday": "2999-01-01",
+            "weightKg": 70,
+            "heightCm": 175,
+            "bootSoleLengthMm": 300,
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_user_router_requires_din_inputs_on_upsert():
+    response = client.put(
+        "/api/users/casey-hill",
+        json={
+            "name": "Casey Hill",
+            "email": "casey@example.com",
+            "sport": "Skier",
+            "skillLevel": "intermediate",
+            "preferredEquipment": "skis",
+            "preferredTerrain": "hybrid",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_get_missing_user_returns_404():
+    response = client.get("/api/users/missing-user")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "User not found"}
+
+
+def test_delete_missing_user_returns_404():
+    response = client.delete("/api/users/missing-user")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "User not found"}
+
+
+def test_user_router_rejects_din_inputs_outside_supported_chart():
+    response = client.put(
+        "/api/users/out-of-range-user",
+        json={
+            **_valid_user_payload(name="Out Range", email="range@example.com"),
+            "weightKg": 5,
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "weight is outside the supported DIN chart range"
+
+
+def test_user_router_keeps_current_snowboarder_din_behavior():
+    birthday = date(1998, 2, 14)
+    response = client.put(
+        "/api/users/snowboarder-user",
+        json={
+            **_valid_user_payload(name="Board Rider", email="board@example.com"),
+            "sport": "Snowboarder",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["sport"] == "Snowboarder"
+    assert response.json()["DIN"] == calculate_din(
+        weight=68.5,
+        boot_sole_length_mm=295,
+        age=_age_for_birthday(birthday),
+        skier_type=3,
+    )
+
+
+def test_user_router_normalizes_blank_profile_inputs_before_din_validation():
+    response = client.put(
+        "/api/users/blank-profile-user",
+        json={
+            **_valid_user_payload(name="Blank Profile", email="blank@example.com"),
+            "skierType": "",
+            "birthday": "",
+            "weightKg": "",
+            "heightCm": "",
+            "bootSoleLengthMm": "",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        "DIN requires skierType, birthday, weightKg, heightCm, and bootSoleLengthMm."
+    )
+
+
+def test_list_users_returns_multiple_users():
+    first_response = client.put(
+        "/api/users/user-one",
+        json=_valid_user_payload(name="User One", email="one@example.com"),
+    )
+    second_response = client.put(
+        "/api/users/user-two",
+        json=_valid_user_payload(name="User Two", email="two@example.com", weight_kg=72, height_cm=180),
+    )
+
+    assert first_response.status_code == 201
+    assert second_response.status_code == 201
+
+    response = client.get("/api/users")
+
+    assert response.status_code == 200
+    payload = response.json()
+    returned_ids = {user["id"] for user in payload["users"]}
+
+    assert returned_ids == {"user-one", "user-two"}
