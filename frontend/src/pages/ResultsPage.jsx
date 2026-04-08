@@ -1,4 +1,4 @@
-export default function ResultsPage({ formData, results, onBackToHome, onNewAssessment }) {
+export default function ResultsPage({ formData, results, onBackToHome, onNewAssessment, onFindShop }) {
   if (!results || !formData) {
     return <main className="main-container">Loading...</main>;
   }

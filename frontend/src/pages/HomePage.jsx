@@ -16,7 +16,7 @@ const features = [
   },
 ];
 
-export default function HomePage({ onStartAssessment }) {
+export default function HomePage({ onStartAssessment, onFindShop }) {
   return (
     <main className="main-container">
       <section className="home-page">

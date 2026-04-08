@@ -27,7 +27,7 @@ const equipmentAgeOptions = [
   { value: '5+ years', label: '5+ years old' },
 ];
 
-export default function FormPage({ onSubmit, onCancel }) {
+export default function FormPage({ onSubmit, onCancel, onFindShop }) {
   const [formData, setFormData] = useState({
     equipmentType: '',
     brand: '',

@@ -628,6 +628,26 @@ input[type='range']::-moz-range-thumb {
   margin-top: 6px;
 }
 
+.find-shop-page {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+  background-color: var(--bg-white);
+  padding: 40px 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.find-shop-description {
+  max-width: 640px;
+  margin: 0 auto 24px;
+}
+
+.find-shop-actions {
+  display: flex;
+  justify-content: center;
+}
+
 @media (max-width: 960px) {
   .header-content {
     grid-template-columns: 1fr;
@@ -686,4 +706,5 @@ input[type='range']::-moz-range-thumb {
     flex-direction: column;
     align-items: flex-start;
   }
+
 }
