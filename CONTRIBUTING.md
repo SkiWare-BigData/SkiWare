@@ -99,21 +99,47 @@ The test suite connects to the local Docker postgres, applies the migration auto
 
 ## Connecting to Cloud SQL (GCP)
 
-> **Only needed if you are running the `data_agent` ingestion pipeline against production.** For normal backend development and testing, the local Docker postgres is sufficient.
+> **Only needed if you are running the `data_agent` ingestion pipeline against production or need direct DB access.** For normal backend development and testing, the local Docker postgres is sufficient.
 
 ### One-time setup
 
-**1. Authenticate with GCP:**
+**1. Install tools:**
 ```bash
+brew install postgresql
+brew install cloud-sql-proxy
+```
+
+**2. Authenticate with GCP:**
+```bash
+gcloud auth login
 gcloud auth application-default login
 gcloud config set project skiware
 ```
 
-**2. Get your Google account added as a Cloud SQL IAM user** — ask the project owner to run:
+**3. Verify your account has been added as a Cloud SQL IAM user** — ask the project owner if you're not sure. They run:
 ```bash
-gcloud sql users create YOUR_EMAIL@colorado.edu \
-  --instance=skiware-db \
-  --type=CLOUD_IAM_USER
+gcloud sql users create YOUR_EMAIL --instance=skiware-db --type=CLOUD_IAM_USER
+```
+
+### Connecting via psql
+
+**1. Start the Cloud SQL proxy in the background:**
+```bash
+cloud-sql-proxy skiware:us-central1:skiware-db --port 9470 &
+```
+
+**2. Connect using your IAM access token as the password:**
+```bash
+PGPASSWORD=$(gcloud auth print-access-token) psql "host=127.0.0.1 port=9470 dbname=skiware user=YOUR_EMAIL sslmode=disable"
+```
+
+Replace `YOUR_EMAIL` with your full email (e.g. `lako2765@colorado.edu` or `james@vallery.net`).
+
+**3. When done, stop the proxy:**
+```bash
+kill %1
+# or
+lsof -ti:9470 | xargs kill -9
 ```
 
 ### Running data_agent against Cloud SQL
@@ -129,7 +155,7 @@ pip install -r data_agent/requirements.txt
 python -m data_agent
 ```
 
-No proxy needed — the Cloud SQL Python Connector authenticates via your Application Default Credentials automatically.
+No proxy needed for the data_agent — the Cloud SQL Python Connector authenticates via your Application Default Credentials automatically.
 
 ---
 
