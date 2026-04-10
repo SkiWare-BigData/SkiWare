@@ -7,7 +7,7 @@ on:
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: us-central1
-  SERVICE_NAME: hello-world
+  SERVICE_NAME: skiware
   REPO_NAME: cloud-run-apps
 
 jobs:
@@ -54,4 +54,7 @@ jobs:
             --cpu 1 \
             --min-instances 0 \
             --max-instances 3 \
+            --service-account skiware-app@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
+            --add-cloudsql-instances ${{ secrets.GCP_PROJECT_ID }}:us-central1:skiware-db \
+            --set-env-vars "CLOUD_SQL_INSTANCE=${{ secrets.GCP_PROJECT_ID }}:us-central1:skiware-db,DB_NAME=skiware,DB_USER=skiware-app@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com" \
             --quiet
