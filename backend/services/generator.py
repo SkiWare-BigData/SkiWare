@@ -59,10 +59,7 @@ async def generate_assessment(
     Returns a populated AssessmentResponse. recommendations field is empty —
     the orchestrator sets it after this call.
     """
-    project = os.environ.get("GCP_PROJECT", "")
-    location = os.environ.get("GCP_REGION", "us-central1")
-
-    client = genai.Client(vertexai=True, project=project, location=location)
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
     contents = f"""Equipment: {request.equipmentType} — {request.brand}
 Terrain: {request.terrain}
