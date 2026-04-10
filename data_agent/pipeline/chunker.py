@@ -10,7 +10,7 @@ CHUNK_OVERLAP = 600
 SEPARATORS = ["\n\n", "\n", ". ", " "]
 
 
-def _split(text: str, sep: str, chunk_size: int, overlap: int) -> list[str]:
+def _split(text: str, sep: str, chunk_size: int) -> list[str]:
     parts = text.split(sep)
     chunks: list[str] = []
     current = ""
@@ -31,18 +31,18 @@ def _split(text: str, sep: str, chunk_size: int, overlap: int) -> list[str]:
     return chunks
 
 
-def _recursive_split(text: str, separators: list[str], chunk_size: int, overlap: int) -> list[str]:
+def _recursive_split(text: str, separators: list[str], chunk_size: int) -> list[str]:
     if not separators or len(text) <= chunk_size:
         return [text] if text.strip() else []
 
     sep = separators[0]
     remaining = separators[1:]
 
-    raw_chunks = _split(text, sep, chunk_size, overlap)
+    raw_chunks = _split(text, sep, chunk_size)
     result: list[str] = []
     for chunk in raw_chunks:
         if len(chunk) > chunk_size:
-            result.extend(_recursive_split(chunk, remaining, chunk_size, overlap))
+            result.extend(_recursive_split(chunk, remaining, chunk_size))
         else:
             if chunk.strip():
                 result.append(chunk)
@@ -60,7 +60,7 @@ def _add_overlap(chunks: list[str], overlap: int) -> list[str]:
 
 
 def chunk_document(doc: Document) -> list[dict]:
-    raw = _recursive_split(doc.content, SEPARATORS, CHUNK_SIZE, CHUNK_OVERLAP)
+    raw = _recursive_split(doc.content, SEPARATORS, CHUNK_SIZE)
     overlapped = _add_overlap(raw, CHUNK_OVERLAP)
     now = datetime.now(timezone.utc).isoformat()
     chunks = []
