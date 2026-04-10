@@ -18,6 +18,7 @@ def _valid_user_payload(*, name: str, email: str, weight_lbs: float = 151.0, hei
     return {
         "name": name,
         "email": email,
+        "password": "TestPass123",
         "preferredSport": "Skier",
         "skillLevel": "advanced",
         "equipment": [{"name": "Rossignol Experience 88", "length": "180", "width": "88"}],
@@ -115,6 +116,7 @@ def test_user_router_supports_crud_flow():
         json={
             "name": "Ava Sender",
             "email": "AVA@EXAMPLE.COM",
+            "password": "TestPass123",
             "preferredSport": "Skier",
             "skillLevel": "advanced",
             "equipment": [{"name": "Rossignol Experience 88", "length": "180", "width": "88"}],
