@@ -36,8 +36,14 @@ def test_assess_endpoint_returns_recommendations():
         json={
             "equipmentType": "skis",
             "brand": "Rossignol",
-            "terrain": "ice-hardpack",
-            "style": "both",
+            "model": "Experience 88",
+            "lengthCm": 180,
+            "age": "1-2 years",
+            "snowCondition": "ice",
+            "terrainType": "groomed",
+            "skillLevel": "advanced",
+            "heightIn": 69,
+            "weightLbs": 155,
             "daysSinceWax": 14,
             "daysSinceEdgeWork": 12,
             "coreShots": 2,
@@ -51,6 +57,9 @@ def test_assess_endpoint_returns_recommendations():
 
     assert payload["equipmentType"] == "skis"
     assert payload["brand"] == "Rossignol"
+    assert payload["snowCondition"] == "ice"
+    assert payload["terrainType"] == "groomed"
+    assert payload["skillLevel"] == "advanced"
     assert payload["daysSinceWax"] == 14
     assert payload["daysSinceEdgeWork"] == 12
     assert len(payload["recommendations"]) >= 3
@@ -64,11 +73,12 @@ def test_assess_endpoint_accepts_blank_optional_numeric_fields():
         json={
             "equipmentType": "snowboard",
             "brand": "Burton",
-            "length": "",
-            "height": "",
-            "weight": "",
-            "terrain": "powder",
-            "style": "off-piste",
+            "lengthCm": "",
+            "heightIn": "",
+            "weightLbs": "",
+            "snowCondition": "powder",
+            "terrainType": "ungroomed",
+            "skillLevel": "intermediate",
             "daysSinceWax": 2,
             "daysSinceEdgeWork": 3,
             "coreShots": 0,
@@ -78,6 +88,24 @@ def test_assess_endpoint_accepts_blank_optional_numeric_fields():
 
     assert response.status_code == 200
     assert response.json()["recommendations"][0]["severity"] == "LOW"
+
+
+def test_assess_endpoint_rejects_invalid_enum_value():
+    response = client.post(
+        "/api/assess",
+        json={
+            "equipmentType": "skis",
+            "snowCondition": "slush",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_assess_endpoint_requires_equipment_type():
+    response = client.post("/api/assess", json={})
+
+    assert response.status_code == 422
 
 
 def test_user_router_supports_crud_flow():
