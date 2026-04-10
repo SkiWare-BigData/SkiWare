@@ -161,14 +161,14 @@ export default function FormPage({ onSubmit, onCancel, onFindShop }) {
               </div>
 
               <div className="form-group">
-                <label htmlFor="length">Length (cm)</label>
+                <label htmlFor="length">Length (in)</label>
                 <input
                   type="number"
                   id="length"
                   name="length"
                   value={formData.length}
                   onChange={handleChange}
-                  placeholder="e.g. 170"
+                  placeholder="e.g. 67"
                 />
               </div>
             </div>
@@ -191,26 +191,26 @@ export default function FormPage({ onSubmit, onCancel, onFindShop }) {
             </div>
             <div className="input-grid">
               <div className="form-group">
-                <label htmlFor="height">Height (cm)</label>
+                <label htmlFor="height">Height (in)</label>
                 <input
                   type="number"
                   id="height"
                   name="height"
                   value={formData.height}
                   onChange={handleChange}
-                  placeholder="e.g. 175"
+                  placeholder="e.g. 69"
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="weight">Weight (kg)</label>
+                <label htmlFor="weight">Weight (lbs)</label>
                 <input
                   type="number"
                   id="weight"
                   name="weight"
                   value={formData.weight}
                   onChange={handleChange}
-                  placeholder="e.g. 70"
+                  placeholder="e.g. 155"
                 />
               </div>
             </div>

@@ -5,4 +5,4 @@ __pycache__/
 *.egg-info/
 .DS_Store
 .github/copilot-instructions.md
-docs
+postgres_data/
