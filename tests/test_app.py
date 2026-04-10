@@ -391,3 +391,95 @@ def test_retriever_returns_empty_when_no_rows():
             chunks = asyncio.run(retrieve_relevant_chunks(mock_db, "general ski question"))
 
     assert chunks == []
+
+
+def test_generator_returns_assessment_response():
+    import asyncio
+    import json
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from backend.models.assesment import AssessmentRequest, AssessmentResponse
+    from backend.services.generator import generate_assessment
+
+    fake_llm_output = {
+        "safeToSki": True,
+        "severity": 2,
+        "verdict": "DIY",
+        "shopCostEstimate": "$20-$40",
+        "timeEstimate": "30 minutes",
+        "skillLevel": "beginner",
+        "repairSteps": ["Clean the base with base cleaner", "Melt P-tex into the gouge"],
+        "partsList": [{"name": "P-tex candle", "searchQuery": "Swix P-tex ski base repair candle"}],
+        "youtubeSuggestions": ["how to patch ski base gouge DIY"],
+    }
+
+    request = AssessmentRequest(
+        equipmentType="skis",
+        brand="Rossignol",
+        terrain="hardpack",
+        issueDescription="small base gouge",
+        daysSinceWax=8,
+        daysSinceEdgeWork=5,
+        coreShots=1,
+    )
+
+    mock_response = MagicMock()
+    mock_response.text = json.dumps(fake_llm_output)
+
+    with patch("backend.services.generator.genai.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+
+        result = asyncio.run(generate_assessment(request, []))
+
+    assert isinstance(result, AssessmentResponse)
+    assert result.safeToSki is True
+    assert result.severity == 2
+    assert result.verdict == "DIY"
+    assert result.recommendations == []
+    assert result.partsList[0].name == "P-tex candle"
+
+
+def test_generator_includes_engagement_metadata_in_prompt():
+    import asyncio
+    import json
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from backend.models.assesment import AssessmentRequest
+    from backend.services.generator import generate_assessment
+
+    fake_llm_output = {
+        "safeToSki": True, "severity": 1, "verdict": "DIY",
+        "shopCostEstimate": "$0", "timeEstimate": "10 minutes",
+        "skillLevel": "beginner", "repairSteps": ["Wax it"],
+        "partsList": [], "youtubeSuggestions": [],
+    }
+
+    request = AssessmentRequest(equipmentType="skis", brand="K2", issueDescription="needs wax")
+    chunks = [
+        {"chunk_text": "Hot wax lasts longer than rub-on", "metadata": {"upvotes": 200, "reply_count": 15, "reply_sentiment": "mostly agreeing"}},
+        {"chunk_text": "Use a wax appropriate for snow temperature", "metadata": None},
+    ]
+
+    mock_response = MagicMock()
+    mock_response.text = json.dumps(fake_llm_output)
+
+    captured_contents = []
+
+    async def fake_generate(**kwargs):
+        captured_contents.append(kwargs.get("contents", ""))
+        return mock_response
+
+    with patch("backend.services.generator.genai.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.aio.models.generate_content = fake_generate
+
+        asyncio.run(generate_assessment(request, chunks))
+
+    prompt = captured_contents[0]
+    assert "200 upvotes" in prompt
+    assert "15 replies" in prompt
+    assert "mostly agreeing" in prompt
+    assert "Authoritative reference" in prompt
