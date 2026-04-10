@@ -1,6 +1,6 @@
 import logging
 
-from data_agent.db.connection import get_connection
+from backend.db.connection import init_connection, get_db
 from data_agent.pipeline.chunker import chunk_document
 from data_agent.pipeline.embedder import embed_batch
 from data_agent.pipeline.store import upsert_chunks
@@ -19,7 +19,8 @@ SOURCES = [
 
 
 def run() -> None:
-    conn = get_connection()
+    init_connection()
+    conn = get_db()
     total_chunks = 0
 
     for source in SOURCES:
