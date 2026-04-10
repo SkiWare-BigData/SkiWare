@@ -9,3 +9,5 @@ bcrypt==4.2.1
 cloud-sql-python-connector[asyncpg]==1.13.0
 google-genai==1.72.0
 google-cloud-aiplatform==1.147.0
+beautifulsoup4==4.12.3
+requests==2.32.3
