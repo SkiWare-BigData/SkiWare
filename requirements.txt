@@ -7,3 +7,5 @@ alembic==1.14.0
 aiosqlite==0.20.0
 bcrypt==4.2.1
 cloud-sql-python-connector[asyncpg]==1.13.0
+beautifulsoup4==4.12.3
+requests==2.32.3
