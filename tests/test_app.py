@@ -483,3 +483,50 @@ def test_generator_includes_engagement_metadata_in_prompt():
     assert "15 replies" in prompt
     assert "mostly agreeing" in prompt
     assert "Authoritative reference" in prompt
+
+
+def test_orchestrator_merges_rule_based_recommendations():
+    import asyncio
+    from unittest.mock import AsyncMock, patch
+
+    from backend.models.assesment import AssessmentRequest, AssessmentResponse, Part
+    from backend.services.assessment import build_assessment_response
+
+    mock_llm_response = AssessmentResponse(
+        equipmentType="skis",
+        brand="Rossignol",
+        safeToSki=True,
+        severity=2,
+        verdict="DIY",
+        shopCostEstimate="$20-$40",
+        timeEstimate="30 minutes",
+        skillLevel="beginner",
+        repairSteps=["Clean the base", "Apply P-tex"],
+        partsList=[Part(name="P-tex candle", searchQuery="Swix P-tex ski base repair candle")],
+        youtubeSuggestions=["how to patch ski base gouge DIY"],
+        recommendations=[],
+    )
+
+    request = AssessmentRequest(
+        equipmentType="skis",
+        brand="Rossignol",
+        terrain="hardpack",
+        issueDescription="base gouge",
+        daysSinceWax=14,
+        daysSinceEdgeWork=5,
+        coreShots=0,
+    )
+
+    mock_db = AsyncMock()
+
+    with patch("backend.services.assessment.retrieve_relevant_chunks", new_callable=AsyncMock) as mock_retrieve, \
+         patch("backend.services.assessment.generate_assessment", new_callable=AsyncMock) as mock_generate:
+
+        mock_retrieve.return_value = []
+        mock_generate.return_value = mock_llm_response
+
+        result = asyncio.run(build_assessment_response(request, mock_db))
+
+    assert result.safeToSki is True
+    assert result.severity == 2
+    assert any("Wax" in r.title for r in result.recommendations)
