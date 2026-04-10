@@ -344,3 +344,50 @@ def test_assess_response_model_has_required_fields():
     assert r.verdict == "DIY"
     assert r.recommendations == []
     assert r.partsList[0].searchQuery == "Swix P-tex ski base repair candle"
+
+
+def test_retriever_returns_chunks_above_threshold():
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from backend.services.retriever import retrieve_relevant_chunks
+
+    mock_db = AsyncMock()
+    mock_rows = [
+        MagicMock(chunk_text="P-tex candles work for surface scratches", metadata={"upvotes": 45}),
+        MagicMock(chunk_text="Clean base before applying any filler", metadata=None),
+    ]
+    mock_db.execute.return_value.fetchall.return_value = mock_rows
+
+    with patch("backend.services.retriever.TextEmbeddingModel") as mock_model_cls:
+        mock_model = MagicMock()
+        mock_model_cls.from_pretrained.return_value = mock_model
+        mock_model.get_embeddings.return_value = [MagicMock(values=[0.1] * 768)]
+
+        with patch("backend.services.retriever.vertexai.init"):
+            chunks = asyncio.run(retrieve_relevant_chunks(mock_db, "base gouge rossignol skis"))
+
+    assert len(chunks) == 2
+    assert chunks[0]["chunk_text"] == "P-tex candles work for surface scratches"
+    assert chunks[0]["metadata"] == {"upvotes": 45}
+    assert chunks[1]["metadata"] is None
+
+
+def test_retriever_returns_empty_when_no_rows():
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from backend.services.retriever import retrieve_relevant_chunks
+
+    mock_db = AsyncMock()
+    mock_db.execute.return_value.fetchall.return_value = []
+
+    with patch("backend.services.retriever.TextEmbeddingModel") as mock_model_cls:
+        mock_model = MagicMock()
+        mock_model_cls.from_pretrained.return_value = mock_model
+        mock_model.get_embeddings.return_value = [MagicMock(values=[0.1] * 768)]
+
+        with patch("backend.services.retriever.vertexai.init"):
+            chunks = asyncio.run(retrieve_relevant_chunks(mock_db, "general ski question"))
+
+    assert chunks == []
