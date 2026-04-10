@@ -48,16 +48,27 @@ SkiWare/
 - Python 3.12+
 - Docker (for running locally in a container)
 
+### Prerequisites
+- Python 3.12+
+- Docker Desktop (required — the database runs in a container)
+
 ### Local Setup
 
 ```bash
 git clone https://github.com/Casazza24/SkiWare.git
 cd SkiWare
 
+# Copy env template (defaults work out of the box for local dev)
+cp .env.example .env
+
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
+# Start the local postgres database
+docker compose up postgres -d
+
+# Run the backend (connects to local Docker postgres automatically)
 python3 -m backend.main
 ```
 
@@ -72,6 +83,53 @@ docker compose up --build
 Frontend runs at `http://localhost:5173`.
 Backend API runs at `http://localhost:8080`.
 The `backend/` and `frontend/` directories are volume-mounted so changes reflect immediately in local development.
+
+> **No GCP access needed for local dev.** The postgres service (`pgvector/pgvector:pg15`) runs entirely in Docker. Cloud SQL is only used in production.
+
+### Running Tests
+
+```bash
+docker compose up postgres -d   # must be running first
+pytest tests/ -v
+```
+
+The test suite connects to the local Docker postgres, applies the migration automatically on first run, and truncates the `users` table between each test. No manual setup needed.
+
+---
+
+## Connecting to Cloud SQL (GCP)
+
+> **Only needed if you are running the `data_agent` ingestion pipeline against production.** For normal backend development and testing, the local Docker postgres is sufficient.
+
+### One-time setup
+
+**1. Authenticate with GCP:**
+```bash
+gcloud auth application-default login
+gcloud config set project skiware
+```
+
+**2. Get your Google account added as a Cloud SQL IAM user** — ask the project owner to run:
+```bash
+gcloud sql users create YOUR_EMAIL@colorado.edu \
+  --instance=skiware-db \
+  --type=CLOUD_IAM_USER
+```
+
+### Running data_agent against Cloud SQL
+
+```bash
+export CLOUD_SQL_INSTANCE="skiware:us-central1:skiware-db"
+export DB_NAME="skiware"
+export DB_USER="YOUR_EMAIL@colorado.edu"
+export GCP_PROJECT="skiware"
+export GCP_REGION="us-central1"
+
+pip install -r data_agent/requirements.txt
+python -m data_agent
+```
+
+No proxy needed — the Cloud SQL Python Connector authenticates via your Application Default Credentials automatically.
 
 ---
 
@@ -149,11 +207,17 @@ Next backend steps:
 
 ## Environment Variables
 
-| Variable | Description | Default |
+See `.env.example` for the full reference. Key variables:
+
+| Variable | Local dev | Cloud Run (production) |
 |---|---|---|
-| `PORT` | Port the app listens on | `8080` |
-| `GEMINI_API_KEY` | Gemini API key for LLM calls | required in production |
-| `DATABASE_URL` | Cloud SQL connection string for pgvector | required in production |
+| `DB_HOST` | `localhost` (or `postgres` in docker-compose) | not set |
+| `DB_NAME` | `skiware` | `skiware` |
+| `DB_USER` | `skiware` | `skiware-app@skiware.iam.gserviceaccount.com` |
+| `DB_PASSWORD` | `skiware` | not set (triggers IAM auth) |
+| `CLOUD_SQL_INSTANCE` | not set | `skiware:us-central1:skiware-db` |
+| `PORT` | `8080` | `8080` |
+| `GCP_PROJECT` | `skiware` (data_agent only) | `skiware` |
 
 Any secrets should be added as GitHub Actions secrets and passed to Cloud Run via `--set-env-vars` in the deploy step — never committed to the repo.
 
