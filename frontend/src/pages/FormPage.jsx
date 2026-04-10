@@ -1,52 +1,48 @@
 import { useState } from 'react';
 
-const snowTypeOptions = [
+const equipmentTypeOptions = [
+  { value: 'skis', label: 'Skis' },
+  { value: 'snowboard', label: 'Snowboard' },
+];
+
+const terrainOptions = [
   { value: 'powder', label: 'Powder' },
-  { value: 'ice', label: 'Ice' },
-  { value: 'hybrid', label: 'Hybrid' },
+  { value: 'hybrid', label: 'Mixed' },
+  { value: 'ice', label: 'Hard / Icy' },
 ];
 
-const difficultyOptions = [
-  { value: 'easy', label: 'Easy' },
-  { value: 'medium', label: 'Intermediate' },
-  { value: 'hard', label: 'Advanced' },
-  { value: 'Expert', label: 'Expert' },
-  { value: 'Park', label: 'Park/Freestyle' },
-];
-
-const terrainTypeOptions = [
+const styleOptions = [
   { value: 'groomed', label: 'Groomed' },
-  { value: 'ungroomed', label: 'Ungroomed' },
-  { value: 'hybrid', label: 'Hybrid' },
+  { value: 'hybrid', label: 'Both' },
+  { value: 'ungroomed', label: 'Off-piste' },
 ];
 
 const equipmentAgeOptions = [
-  { value: '0-1 year', label: '0-1 years old' },
-  { value: '1-2 years', label: '1-2 years old' },
-  { value: '2-5 years', label: '2-5 years old' },
-  { value: '5+ years', label: '5+ years old' },
+  { value: '0-1 year', label: '0-1 years' },
+  { value: '1-2 years', label: '1-2 years' },
+  { value: '2-5 years', label: '2-5 years' },
+  { value: '5+ years', label: '5+ years' },
 ];
 
-export default function FormPage({ onSubmit, onCancel, onFindShop }) {
-  const [formData, setFormData] = useState({
-    equipmentType: '',
-    brand: '',
-    length: '',
-    age: '',
-    terrain: '',
-    difficulty: '',
-    style: '',
-    daysSinceWax: 0,
-    daysSinceEdgeWork: 0,
-    coreShots: 0,
-    height: '',
-    weight: '',
-    issueDescription: '',
-  });
+const INITIAL_FORM = {
+  equipmentType: 'skis',
+  brand: '',
+  length: '',
+  age: '1-2 years',
+  terrain: 'hybrid',
+  style: 'hybrid',
+  daysSinceWax: 0,
+  daysSinceEdgeWork: 0,
+  coreShots: 0,
+  height: '',
+  weight: '',
+};
+
+export default function FormPage({ onSubmit, onCancel }) {
+  const [formData, setFormData] = useState(INITIAL_FORM);
 
   const handleChange = (event) => {
     const { name, value, type } = event.target;
-
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'number' ? (value === '' ? '' : parseInt(value, 10)) : value,
@@ -55,11 +51,11 @@ export default function FormPage({ onSubmit, onCancel, onFindShop }) {
 
   const handleSliderChange = (event) => {
     const { name, value } = event.target;
+    setFormData((prev) => ({ ...prev, [name]: parseInt(value, 10) }));
+  };
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: parseInt(value, 10),
-    }));
+  const handleTileSelect = (name, value) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = (event) => {
@@ -70,84 +66,29 @@ export default function FormPage({ onSubmit, onCancel, onFindShop }) {
   return (
     <main className="main-container">
       <section className="form-page">
+        <div className="page-header">
+          <h1>Gear Assessment</h1>
+          <p>Tell us about your setup and how it has been running.</p>
+        </div>
+
         <form onSubmit={handleSubmit} className="assessment-form">
           <div className="form-section">
-            <div className="form-section-title">Equipment Type</div>
-            <div className="form-section-subtitle">What are you riding?</div>
-            <div className="segmented-grid equipment-grid">
-              <TileOption
-                name="equipmentType"
-                value="skis"
-                checked={formData.equipmentType === 'skis'}
-                onChange={handleChange}
-                label="Skis"
-              />
-              <TileOption
-                name="equipmentType"
-                value="snowboard"
-                checked={formData.equipmentType === 'snowboard'}
-                onChange={handleChange}
-                label="Snowboard"
-              />
+            <div className="section-title">Equipment</div>
+            <div className="section-subtitle">What are you riding?</div>
+            <div className="segmented-grid grid-2">
+              {equipmentTypeOptions.map((option) => (
+                <TileOption
+                  key={option.value}
+                  name="equipmentType"
+                  value={option.value}
+                  checked={formData.equipmentType === option.value}
+                  onSelect={handleTileSelect}
+                  label={option.label}
+                />
+              ))}
             </div>
-          </div>
 
-          <div className="form-section">
-            <div className="form-section-title">Snow Type &amp; Terrain</div>
-            <div className="form-section-subtitle">What conditions do you typically ride?</div>
-
-            <Fieldset title="Snow Type">
-              <div className="segmented-grid triple-grid">
-                {snowTypeOptions.map((option) => (
-                  <TileOption
-                    key={option.value}
-                    name="terrain"
-                    value={option.value}
-                    checked={formData.terrain === option.value}
-                    onChange={handleChange}
-                    label={option.label}
-                  />
-                ))}
-              </div>
-            </Fieldset>
-
-            <Fieldset title="Difficulty Level">
-              <div className="segmented-grid difficulty-grid">
-                {difficultyOptions.map((option) => (
-                  <TileOption
-                    key={option.value}
-                    name="difficulty"
-                    value={option.value}
-                    checked={formData.difficulty === option.value}
-                    onChange={handleChange}
-                    label={option.label}
-                    compact
-                  />
-                ))}
-              </div>
-            </Fieldset>
-
-            <Fieldset title="Terrain Type">
-              <div className="segmented-grid triple-grid">
-                {terrainTypeOptions.map((option) => (
-                  <TileOption
-                    key={option.value}
-                    name="style"
-                    value={option.value}
-                    checked={formData.style === option.value}
-                    onChange={handleChange}
-                    label={option.label}
-                  />
-                ))}
-              </div>
-            </Fieldset>
-          </div>
-
-          <div className="form-section">
-            <div className="form-section-title">Equipment Details</div>
-            <div className="form-section-subtitle">Tell us about your gear</div>
-
-            <div className="input-grid">
+            <div className="input-grid" style={{ marginTop: '18px' }}>
               <div className="form-group">
                 <label htmlFor="brand">Brand</label>
                 <input
@@ -156,25 +97,24 @@ export default function FormPage({ onSubmit, onCancel, onFindShop }) {
                   name="brand"
                   value={formData.brand}
                   onChange={handleChange}
-                  placeholder="Rossignol, Burton, K2"
+                  placeholder="e.g. Rossignol"
                 />
               </div>
-
               <div className="form-group">
-                <label htmlFor="length">Length (in)</label>
+                <label htmlFor="length">Length (cm)</label>
                 <input
                   type="number"
                   id="length"
                   name="length"
                   value={formData.length}
                   onChange={handleChange}
-                  placeholder="e.g. 67"
+                  placeholder="e.g. 170"
                 />
               </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="age">Equipment Age</label>
+            <div className="form-group" style={{ marginTop: '14px' }}>
+              <label htmlFor="age">Equipment age</label>
               <select id="age" name="age" value={formData.age} onChange={handleChange}>
                 {equipmentAgeOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -184,11 +124,47 @@ export default function FormPage({ onSubmit, onCancel, onFindShop }) {
               </select>
             </div>
           </div>
+
           <div className="form-section">
-            <div className="form-section-title">Rider Info</div>
-            <div className="form-section-subtitle">
-              Helps us provide better recommendations
+            <div className="section-title">Conditions</div>
+            <div className="section-subtitle">Where do you usually ride?</div>
+
+            <div className="choice-group">
+              <div className="choice-group-title">Snow type</div>
+              <div className="segmented-grid grid-3">
+                {terrainOptions.map((option) => (
+                  <TileOption
+                    key={option.value}
+                    name="terrain"
+                    value={option.value}
+                    checked={formData.terrain === option.value}
+                    onSelect={handleTileSelect}
+                    label={option.label}
+                  />
+                ))}
+              </div>
             </div>
+
+            <div className="choice-group">
+              <div className="choice-group-title">Terrain</div>
+              <div className="segmented-grid grid-3">
+                {styleOptions.map((option) => (
+                  <TileOption
+                    key={option.value}
+                    name="style"
+                    value={option.value}
+                    checked={formData.style === option.value}
+                    onSelect={handleTileSelect}
+                    label={option.label}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="form-section">
+            <div className="section-title">Rider</div>
+            <div className="section-subtitle">Used to tune the recommendations.</div>
             <div className="input-grid">
               <div className="form-group">
                 <label htmlFor="height">Height (in)</label>
@@ -201,7 +177,6 @@ export default function FormPage({ onSubmit, onCancel, onFindShop }) {
                   placeholder="e.g. 69"
                 />
               </div>
-
               <div className="form-group">
                 <label htmlFor="weight">Weight (lbs)</label>
                 <input
@@ -217,8 +192,8 @@ export default function FormPage({ onSubmit, onCancel, onFindShop }) {
           </div>
 
           <div className="form-section">
-            <div className="form-section-title">Maintenance History</div>
-            <div className="form-section-subtitle">When did you last service your gear?</div>
+            <div className="section-title">Maintenance history</div>
+            <div className="section-subtitle">When did you last service your gear?</div>
 
             <SliderField
               id="daysSinceWax"
@@ -228,20 +203,18 @@ export default function FormPage({ onSubmit, onCancel, onFindShop }) {
               max={30}
               onChange={handleSliderChange}
             />
-
             <SliderField
               id="daysSinceEdgeWork"
               name="daysSinceEdgeWork"
-              label="Days of riding since last edge sharpening"
+              label="Days of riding since last edge tune"
               value={formData.daysSinceEdgeWork}
               max={30}
               onChange={handleSliderChange}
             />
-
             <SliderField
               id="coreShots"
               name="coreShots"
-              label="Number of core shots (visible damage)"
+              label="Visible core shots in the base"
               value={formData.coreShots}
               max={10}
               onChange={handleSliderChange}
@@ -253,7 +226,7 @@ export default function FormPage({ onSubmit, onCancel, onFindShop }) {
               Back
             </button>
             <button type="submit" className="btn-primary">
-              Get Recommendations
+              Get recommendations
             </button>
           </div>
         </form>
@@ -262,37 +235,22 @@ export default function FormPage({ onSubmit, onCancel, onFindShop }) {
   );
 }
 
-function Fieldset({ title, children }) {
+function TileOption({ name, value, checked, onSelect, label }) {
   return (
-    <div className="choice-group">
-      <div className="choice-group-title">{title}</div>
-      {children}
-    </div>
-  );
-}
-
-function TileOption({ name, value, checked, onChange, label, compact = false }) {
-  const id = `${name}-${value}`;
-
-  return (
-    <label htmlFor={id} className={`tile-option ${checked ? 'selected' : ''} ${compact ? 'compact' : ''}`}>
-      <input
-        className="sr-only"
-        type="radio"
-        id={id}
-        name={name}
-        value={value}
-        checked={checked}
-        onChange={onChange}
-      />
-      <span>{label}</span>
-    </label>
+    <button
+      type="button"
+      className={`tile-option ${checked ? 'selected' : ''}`}
+      onClick={() => onSelect(name, value)}
+      aria-pressed={checked}
+    >
+      {label}
+    </button>
   );
 }
 
 function SliderField({ id, name, label, value, max, onChange }) {
   return (
-    <div className="form-group slider-field">
+    <div className="slider-field">
       <div className="slider-label-row">
         <label htmlFor={id}>{label}</label>
         <span className="slider-value">{value}</span>

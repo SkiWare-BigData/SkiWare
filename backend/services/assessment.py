@@ -97,8 +97,9 @@ def build_assessment_response(payload: AssessmentRequest) -> AssessmentResponse:
     return AssessmentResponse(
         equipmentType=payload.equipmentType,
         brand=payload.brand,
-        terrain=payload.terrain,
-        style=payload.style,
+        snowCondition=payload.snowCondition,
+        terrainType=payload.terrainType,
+        skillLevel=payload.skillLevel,
         daysSinceWax=payload.daysSinceWax,
         daysSinceEdgeWork=payload.daysSinceEdgeWork,
         recommendations=recommendations,
