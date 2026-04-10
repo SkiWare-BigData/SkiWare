@@ -1,13 +1,36 @@
 services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    environment:
+      POSTGRES_DB: skiware
+      POSTGRES_USER: skiware
+      POSTGRES_PASSWORD: skiware
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skiware"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   app:
     build: .
     command: ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
     ports:
       - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       - PORT=8080
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=skiware
+      - DB_USER=skiware
+      - DB_PASSWORD=skiware
     volumes:
-      - ./backend:/app/backend  # hot reload during local dev
+      - ./backend:/app/backend
+
   frontend:
     build:
       context: ./frontend
