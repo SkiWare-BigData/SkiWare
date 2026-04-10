@@ -2,7 +2,6 @@ const navItems = [
   { id: 'home', label: 'Home' },
   { id: 'form', label: 'Assessment' },
   { id: 'findShop', label: 'Find a Shop' },
-  { id: 'myfit', label: 'MyFit' },
 ];
 
 export default function Header({ currentPage, onNavigate, currentUser, onLogout }) {
@@ -11,14 +10,17 @@ export default function Header({ currentPage, onNavigate, currentUser, onLogout 
       <div className="header-content">
         <button
           type="button"
-          className="logo"
+          className="brand"
           onClick={() => onNavigate('home')}
-          aria-label="Go to Ski Ware home"
+          aria-label="SkiWare home"
         >
-          <span className="logo-mark" aria-hidden="true">
-            <span className="logo-mark-peak"></span>
+          <span className="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 20 L12 4 L21 20 Z" />
+              <path d="M8.5 13 L12 7 L15.5 13" />
+            </svg>
           </span>
-          <span className="logo-text">SKI WARE</span>
+          SkiWare
         </button>
 
         <nav className="header-nav" aria-label="Primary">
@@ -27,7 +29,7 @@ export default function Header({ currentPage, onNavigate, currentUser, onLogout 
               key={item.id}
               type="button"
               className={`nav-link ${currentPage === item.id ? 'active' : ''}`}
-              onClick={() => !['myfit'].includes(item.id) && onNavigate(item.id)}
+              onClick={() => onNavigate(item.id)}
             >
               {item.label}
             </button>
@@ -39,12 +41,12 @@ export default function Header({ currentPage, onNavigate, currentUser, onLogout 
             <>
               <button
                 type="button"
-                className="auth-link"
+                className="btn-ghost"
                 onClick={() => onNavigate('user')}
               >
                 {currentUser.name.split(' ')[0]}
               </button>
-              <button type="button" className="auth-button" onClick={onLogout}>
+              <button type="button" className="btn-primary" onClick={onLogout}>
                 Sign Out
               </button>
             </>
@@ -52,17 +54,17 @@ export default function Header({ currentPage, onNavigate, currentUser, onLogout 
             <>
               <button
                 type="button"
-                className="auth-link"
+                className="btn-ghost"
                 onClick={() => onNavigate('user')}
               >
-                Login
+                Sign In
               </button>
               <button
                 type="button"
-                className="auth-button"
+                className="btn-primary"
                 onClick={() => onNavigate('user')}
               >
-                Sign Up
+                Create Account
               </button>
             </>
           )}
