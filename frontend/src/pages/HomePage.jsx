@@ -48,9 +48,14 @@ export default function HomePage({ onStartAssessment, onFindShop }) {
         </div>
 
         <div className="cta-section">
-          <button className="btn-primary cta-button" onClick={onStartAssessment}>
-            Start Assessment
-          </button>
+          <div className="cta-buttons">
+            <button className="btn-primary cta-button" onClick={onStartAssessment}>
+              Start Assessment
+            </button>
+            <button className="btn-secondary cta-button" onClick={onFindShop}>
+              Find a Shop
+            </button>
+          </div>
           <p className="cta-text">Takes less than 2 minutes · No account required</p>
         </div>
       </section>

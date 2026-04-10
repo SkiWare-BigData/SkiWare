@@ -1,25 +1,34 @@
 import os
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
-from backend.db.connection import close_connection, init_connection
 from backend.routers.assessments import router as assessments_router
+from backend.routers.auth import router as auth_router
+from backend.routers.shops import router as shops_router
 from backend.routers.users import router as users_router
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    init_connection()
-    yield
-    close_connection()
-
-
-app = FastAPI(title="SkiWare", lifespan=lifespan)
+app = FastAPI(title="SkiWare")
 
 app.include_router(assessments_router)
+app.include_router(auth_router)
+app.include_router(shops_router)
 app.include_router(users_router)
+
+# Serve compiled React frontend (present in production image, absent in local dev)
+_DIST = Path(__file__).parent.parent / "frontend" / "dist"
+if _DIST.exists():
+    app.mount("/assets", StaticFiles(directory=_DIST / "assets"), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_frontend(full_path: str) -> FileResponse:
+        candidate = _DIST / full_path
+        if candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(_DIST / "index.html")
 
 
 if __name__ == "__main__":

@@ -1,38 +1,41 @@
-import os
-import pathlib
+import asyncio
 
 import pytest
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
-from backend.db.connection import close_connection, get_db, init_connection
+import backend.models.tables  # noqa: registers ORM models with Base.metadata
+from backend.database import Base, get_db
+from backend.main import app
+
+TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
-@pytest.fixture(scope="session", autouse=True)
-def db_connection():
-    """Initialize a real DB connection for the test session.
+@pytest.fixture(autouse=True)
+def db_override():
+    engine = create_async_engine(
+        TEST_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
-    Uses local Docker postgres by default. Override with env vars for Cloud SQL:
-      CLOUD_SQL_INSTANCE, DB_NAME, DB_USER
-    """
-    os.environ.setdefault("DB_HOST", "localhost")
-    os.environ.setdefault("DB_PORT", "5432")
-    os.environ.setdefault("DB_NAME", "skiware")
-    os.environ.setdefault("DB_USER", "skiware")
-    os.environ.setdefault("DB_PASSWORD", "skiware")
+    async def create_tables() -> None:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
-    init_connection()
+    async def drop_tables() -> None:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+        await engine.dispose()
 
-    # Apply migration so tables exist
-    conn = get_db()
-    cursor = conn.cursor()
-    migration = pathlib.Path(__file__).parent.parent / "migrations" / "001_init.sql"
-    sql = migration.read_text()
-    for stmt in sql.split(";"):
-        stmt = stmt.strip()
-        if stmt:
-            cursor.execute(stmt)
-    conn.commit()
-    cursor.close()
+    asyncio.run(create_tables())
 
+    async def override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
     yield
-
-    close_connection()
+    app.dependency_overrides.clear()
+    asyncio.run(drop_tables())

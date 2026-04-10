@@ -1,6 +1,7 @@
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from data_agent.db.connection import get_connection
+from backend.db.connection import init_connection, get_db
 from data_agent.pipeline.chunker import chunk_document
 from data_agent.pipeline.embedder import embed_batch
 from data_agent.pipeline.store import upsert_chunks
@@ -19,36 +20,60 @@ SOURCES = [
 
 
 def run() -> None:
-    conn = get_connection()
-    total_chunks = 0
+    init_connection()
+    conn = get_db()
 
-    for source in SOURCES:
-        logger.info(f"Running source: {source.__class__.__name__}")
-        try:
-            docs = source.fetch()
-        except Exception as e:
-            logger.error(f"Source {source.__class__.__name__} failed to fetch: {e}")
-            continue
-
-        for doc in docs:
+    # Fetch all sources in parallel
+    all_docs = []
+    with ThreadPoolExecutor() as executor:
+        futures = {executor.submit(source.fetch): source for source in SOURCES}
+        for future in as_completed(futures):
+            source = futures[future]
             try:
-                chunks = chunk_document(doc)
-                if not chunks:
-                    logger.warning(f"No chunks produced for {doc.url}")
-                    continue
-                embeddings = embed_batch([c["text"] for c in chunks])
-                upsert_chunks(conn, chunks, embeddings)
-                total_chunks += len(chunks)
-                logger.info(f"Processed {doc.url} — {len(chunks)} chunks")
+                docs = future.result()
+                all_docs.extend(docs)
+                logger.info(f"{source.__class__.__name__} fetched {len(docs)} docs")
             except Exception as e:
-                logger.error(f"Failed processing {doc.url}: {e}")
-                try:
-                    conn.rollback()
-                except Exception:
-                    pass
+                logger.error(f"Source {source.__class__.__name__} failed: {e}")
 
-    conn.close()
-    logger.info(f"Run complete. Total chunks upserted: {total_chunks}")
+    # Chunk all docs
+    all_chunks = []
+    for doc in all_docs:
+        try:
+            chunks = chunk_document(doc)
+            if not chunks:
+                logger.warning(f"No chunks produced for {doc.url}")
+                continue
+            all_chunks.extend(chunks)
+            logger.info(f"Chunked {doc.url} — {len(chunks)} chunks")
+        except Exception as e:
+            logger.error(f"Failed chunking {doc.url}: {e}")
+
+    if not all_chunks:
+        logger.warning("No chunks produced across all sources — nothing to embed or store")
+        conn.close()
+        return
+
+    # Single embed call across all chunks
+    try:
+        embeddings = embed_batch([c["text"] for c in all_chunks])
+    except Exception as e:
+        logger.error(f"Embedding failed: {e}")
+        conn.close()
+        return
+
+    # Single store call
+    try:
+        upsert_chunks(conn, all_chunks, embeddings)
+        logger.info(f"Run complete. Total chunks processed: {len(all_chunks)}")
+    except Exception as e:
+        logger.error(f"Store failed: {e}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":

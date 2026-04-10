@@ -5,24 +5,22 @@ import HomePage from './pages/HomePage';
 import FormPage from './pages/FormPage';
 import ResultsPage from './pages/ResultsPage';
 import FindShopPage from './pages/FindShopPage';
+import UserPage from './pages/UserPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [formData, setFormData] = useState(null);
   const [results, setResults] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
 
   const handleNavigate = (page) => {
-    if (page === 'myfit') {
-      return;
-    }
-
-    if (page === 'home') {
-      handleBackToHome();
-      return;
-    }
-
+    if (page === 'myfit') return;
+    if (page === 'home') { handleBackToHome(); return; }
     setCurrentPage(page);
   };
+
+  const handleLogin = (user) => setCurrentUser(user);
+  const handleLogout = () => setCurrentUser(null);
 
   const handleStartAssessment = () => {
     setCurrentPage('form');
@@ -70,8 +68,15 @@ function App() {
 
   return (
     <div className="app">
-      <Header currentPage={currentPage} onNavigate={handleNavigate} />
-      {currentPage === 'home' && <HomePage onStartAssessment={handleStartAssessment} onFindShop={handleFindShop} />}
+      <Header
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
+      {currentPage === 'home' && (
+        <HomePage onStartAssessment={handleStartAssessment} onFindShop={handleFindShop} />
+      )}
       {currentPage === 'form' && (
         <FormPage onSubmit={handleFormSubmit} onCancel={handleBackToHome} onFindShop={handleFindShop} />
       )}
@@ -85,7 +90,15 @@ function App() {
         />
       )}
       {currentPage === 'findShop' && (
-        <FindShopPage onBackToHome={handleBackToHome} onFindShop={handleFindShop} />
+        <FindShopPage onBackToHome={handleBackToHome} />
+      )}
+      {currentPage === 'user' && (
+        <UserPage
+          currentUser={currentUser}
+          onLogin={handleLogin}
+          onLogout={handleLogout}
+          onBackToHome={handleBackToHome}
+        />
       )}
     </div>
   );

@@ -1,12 +1,14 @@
 services:
-  postgres:
-    image: pgvector/pgvector:pg15
+  db:
+    image: postgres:16
     environment:
-      POSTGRES_DB: skiware
       POSTGRES_USER: skiware
       POSTGRES_PASSWORD: skiware
+      POSTGRES_DB: skiware
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U skiware"]
       interval: 5s
@@ -18,18 +20,17 @@ services:
     command: ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
     ports:
       - "8080:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
       - PORT=8080
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=skiware
-      - DB_USER=skiware
-      - DB_PASSWORD=skiware
+      - DATABASE_URL=postgresql+asyncpg://skiware:skiware@db:5432/skiware
+      - GOOGLE_PLACES_API_KEY=${GOOGLE_PLACES_API_KEY}
     volumes:
       - ./backend:/app/backend
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+    depends_on:
+      db:
+        condition: service_healthy
 
   frontend:
     build:
@@ -47,3 +48,4 @@ services:
 
 volumes:
   frontend_node_modules:
+  postgres_data:

@@ -1,19 +1,13 @@
 from datetime import date
 
-import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import app
+from backend.models.assesment import AssessmentResponse, Part
 from backend.services.calculate_DIN import calculate_din
-from backend.services.users import reset_user_store
 
 
 client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def clear_user_store() -> None:
-    reset_user_store()
 
 
 def _age_for_birthday(birthday: date) -> int:
@@ -21,70 +15,109 @@ def _age_for_birthday(birthday: date) -> int:
     return today.year - birthday.year - ((today.month, today.day) < (birthday.month, birthday.day))
 
 
-def _valid_user_payload(*, name: str, email: str, weight_kg: float = 68.5, height_cm: float = 172) -> dict[str, object]:
+def _valid_user_payload(*, name: str, email: str, weight_lbs: float = 151.0, height_in: float = 67.7) -> dict[str, object]:
     return {
         "name": name,
         "email": email,
-        "sport": "Skier",
+        "preferredSport": "Skier",
         "skillLevel": "advanced",
-        "preferredEquipment": "skis",
+        "equipment": [{"name": "Rossignol Experience 88", "length": "180", "width": "88"}],
         "preferredTerrain": "powder",
         "skierType": 3,
         "birthday": "1998-02-14",
-        "weightKg": weight_kg,
-        "heightCm": height_cm,
+        "weightLbs": weight_lbs,
+        "heightIn": height_in,
         "bootSoleLengthMm": 295,
+        "password": "TestPass123!",
     }
 
 
-def test_assess_endpoint_returns_recommendations():
-    response = client.post(
-        "/api/assess",
-        json={
-            "equipmentType": "skis",
-            "brand": "Rossignol",
-            "terrain": "ice-hardpack",
-            "style": "both",
-            "daysSinceWax": 14,
-            "daysSinceEdgeWork": 12,
-            "coreShots": 2,
-            "issueDescription": "A few scratches underfoot after early-season rocks.",
-        },
+def _mock_llm_response(equipmentType: str = "skis", brand: str = "Rossignol") -> AssessmentResponse:
+    return AssessmentResponse(
+        equipmentType=equipmentType,
+        brand=brand,
+        safeToSki=True,
+        severity=2,
+        verdict="DIY",
+        shopCostEstimate="$20-$40",
+        timeEstimate="30 minutes",
+        skillLevel="beginner",
+        repairSteps=["Clean the base with base cleaner", "Melt P-tex into the gouge"],
+        partsList=[Part(name="P-tex candle", searchQuery="Swix P-tex ski base repair candle")],
+        youtubeSuggestions=["how to patch ski base gouge DIY"],
+        recommendations=[],
     )
 
+
+def test_assess_endpoint_returns_full_mvp_response():
+    from unittest.mock import AsyncMock, patch
+
+    with patch("backend.services.assessment.retrieve_relevant_chunks", new_callable=AsyncMock) as mock_retrieve, \
+         patch("backend.services.assessment.generate_assessment", new_callable=AsyncMock) as mock_generate:
+
+        mock_retrieve.return_value = []
+        mock_generate.return_value = _mock_llm_response()
+
+        response = client.post(
+            "/api/assess",
+            json={
+                "equipmentType": "skis",
+                "brand": "Rossignol",
+                "terrain": "ice-hardpack",
+                "style": "both",
+                "daysSinceWax": 14,
+                "daysSinceEdgeWork": 12,
+                "coreShots": 2,
+                "issueDescription": "A few scratches underfoot after early-season rocks.",
+            },
+        )
+
     assert response.status_code == 200
-
     payload = response.json()
-
     assert payload["equipmentType"] == "skis"
     assert payload["brand"] == "Rossignol"
-    assert payload["daysSinceWax"] == 14
-    assert payload["daysSinceEdgeWork"] == 12
-    assert len(payload["recommendations"]) >= 3
-    assert all("title" in recommendation for recommendation in payload["recommendations"])
-    assert len(payload["tips"]) == 5
+    assert payload["safeToSki"] is True
+    assert 1 <= payload["severity"] <= 5
+    assert payload["verdict"] in ("DIY", "SHOP")
+    assert len(payload["repairSteps"]) > 0
+    assert len(payload["partsList"]) > 0
+    assert len(payload["youtubeSuggestions"]) > 0
+    # daysSinceWax=14 and coreShots=2 both trigger rule-based recommendations
+    assert len(payload["recommendations"]) >= 2
+    assert all("title" in r for r in payload["recommendations"])
 
 
 def test_assess_endpoint_accepts_blank_optional_numeric_fields():
-    response = client.post(
-        "/api/assess",
-        json={
-            "equipmentType": "snowboard",
-            "brand": "Burton",
-            "length": "",
-            "height": "",
-            "weight": "",
-            "terrain": "powder",
-            "style": "off-piste",
-            "daysSinceWax": 2,
-            "daysSinceEdgeWork": 3,
-            "coreShots": 0,
-            "issueDescription": "",
-        },
-    )
+    from unittest.mock import AsyncMock, patch
+
+    with patch("backend.services.assessment.retrieve_relevant_chunks", new_callable=AsyncMock) as mock_retrieve, \
+         patch("backend.services.assessment.generate_assessment", new_callable=AsyncMock) as mock_generate:
+
+        mock_retrieve.return_value = []
+        mock_generate.return_value = _mock_llm_response(equipmentType="snowboard", brand="Burton")
+
+        response = client.post(
+            "/api/assess",
+            json={
+                "equipmentType": "snowboard",
+                "brand": "Burton",
+                "length": "",
+                "height": "",
+                "weight": "",
+                "terrain": "powder",
+                "style": "off-piste",
+                "daysSinceWax": 2,
+                "daysSinceEdgeWork": 3,
+                "coreShots": 0,
+                "issueDescription": "",
+            },
+        )
 
     assert response.status_code == 200
-    assert response.json()["recommendations"][0]["severity"] == "LOW"
+    payload = response.json()
+    assert payload["equipmentType"] == "snowboard"
+    # daysSinceWax=2 and coreShots=0 produce no rule-based recommendations
+    assert payload["recommendations"] == []
 
 
 def test_user_router_supports_crud_flow():
@@ -94,15 +127,16 @@ def test_user_router_supports_crud_flow():
         json={
             "name": "Ava Sender",
             "email": "AVA@EXAMPLE.COM",
-            "sport": "Skier",
+            "preferredSport": "Skier",
             "skillLevel": "advanced",
-            "preferredEquipment": "skis",
+            "equipment": [{"name": "Rossignol Experience 88", "length": "180", "width": "88"}],
             "preferredTerrain": "powder",
             "skierType": 3,
             "birthday": birthday.isoformat(),
-            "weightKg": 68.5,
-            "heightCm": 172,
+            "weightLbs": 151.0,
+            "heightIn": 67.7,
             "bootSoleLengthMm": 295,
+            "password": "TestPass123!",
         },
     )
 
@@ -112,15 +146,15 @@ def test_user_router_supports_crud_flow():
     user_id = "ava-sender"
 
     assert created_user["email"] == "ava@example.com"
-    assert created_user["sport"] == "Skier"
+    assert created_user["preferredSport"] == "Skier"
     assert created_user["skillLevel"] == "advanced"
     assert created_user["skierType"] == 3
     assert created_user["birthday"] == birthday.isoformat()
-    assert created_user["weightKg"] == 68.5
-    assert created_user["heightCm"] == 172.0
+    assert created_user["weightLbs"] == 151.0
+    assert created_user["heightIn"] == 67.7
     assert created_user["bootSoleLengthMm"] == 295
     assert created_user["DIN"] == calculate_din(
-        weight=68.5,
+        weight=151.0 * 0.453592,
         boot_sole_length_mm=295,
         age=_age_for_birthday(birthday),
         skier_type=3,
@@ -139,25 +173,31 @@ def test_user_router_supports_crud_flow():
         json={
             "name": "Ava Sender",
             "email": "ava@example.com",
-            "sport": "Skier",
+            "preferredSport": "Skier",
             "skillLevel": "advanced",
-            "preferredEquipment": "both",
+            "equipment": [
+                {"name": "Rossignol Experience 88", "length": "180", "width": "88"},
+                {"name": "K2 Mindbender 108Ti", "length": "184", "width": "108"},
+            ],
             "preferredTerrain": "backcountry",
             "skierType": 3,
             "birthday": birthday.isoformat(),
-            "weightKg": 72,
-            "heightCm": 174,
+            "weightLbs": 158.7,
+            "heightIn": 68.5,
             "bootSoleLengthMm": 295,
         },
     )
     assert update_response.status_code == 200
-    assert update_response.json()["sport"] == "Skier"
-    assert update_response.json()["preferredEquipment"] == "both"
+    assert update_response.json()["preferredSport"] == "Skier"
+    assert update_response.json()["equipment"] == [
+        {"name": "Rossignol Experience 88", "length": "180", "width": "88"},
+        {"name": "K2 Mindbender 108Ti", "length": "184", "width": "108"},
+    ]
     assert update_response.json()["preferredTerrain"] == "backcountry"
-    assert update_response.json()["weightKg"] == 72.0
-    assert update_response.json()["heightCm"] == 174.0
+    assert update_response.json()["weightLbs"] == 158.7
+    assert update_response.json()["heightIn"] == 68.5
     assert update_response.json()["DIN"] == calculate_din(
-        weight=72,
+        weight=158.7 * 0.453592,
         boot_sole_length_mm=295,
         age=_age_for_birthday(birthday),
         skier_type=3,
@@ -166,7 +206,7 @@ def test_user_router_supports_crud_flow():
     updated_detail_response = client.get(f"/api/users/{user_id}")
     assert updated_detail_response.status_code == 200
     assert updated_detail_response.json()["DIN"] == calculate_din(
-        weight=72,
+        weight=158.7 * 0.453592,
         boot_sole_length_mm=295,
         age=_age_for_birthday(birthday),
         skier_type=3,
@@ -203,9 +243,9 @@ def test_user_router_rejects_future_birthday():
         json={
             "name": "Mika Summit",
             "email": "mika@example.com",
-            "sport": "Skier",
+            "preferredSport": "Skier",
             "skillLevel": "intermediate",
-            "preferredEquipment": "skis",
+            "equipment": [{"name": "Rossignol Experience 88", "length": "180", "width": "88"}],
             "preferredTerrain": "hybrid",
             "skierType": 2,
             "birthday": "2999-01-01",
@@ -224,9 +264,9 @@ def test_user_router_requires_din_inputs_on_upsert():
         json={
             "name": "Casey Hill",
             "email": "casey@example.com",
-            "sport": "Skier",
+            "preferredSport": "Skier",
             "skillLevel": "intermediate",
-            "preferredEquipment": "skis",
+            "equipment": [{"name": "Rossignol Experience 88", "length": "180", "width": "88"}],
             "preferredTerrain": "hybrid",
         },
     )
@@ -253,7 +293,7 @@ def test_user_router_rejects_din_inputs_outside_supported_chart():
         "/api/users/out-of-range-user",
         json={
             **_valid_user_payload(name="Out Range", email="range@example.com"),
-            "weightKg": 5,
+            "weightLbs": 11.0,
         },
     )
 
@@ -267,14 +307,14 @@ def test_user_router_keeps_current_snowboarder_din_behavior():
         "/api/users/snowboarder-user",
         json={
             **_valid_user_payload(name="Board Rider", email="board@example.com"),
-            "sport": "Snowboarder",
+            "preferredSport": "Snowboarder",
         },
     )
 
     assert response.status_code == 201
-    assert response.json()["sport"] == "Snowboarder"
+    assert response.json()["preferredSport"] == "Snowboarder"
     assert response.json()["DIN"] == calculate_din(
-        weight=68.5,
+        weight=151.0 * 0.453592,
         boot_sole_length_mm=295,
         age=_age_for_birthday(birthday),
         skier_type=3,
@@ -288,15 +328,15 @@ def test_user_router_normalizes_blank_profile_inputs_before_din_validation():
             **_valid_user_payload(name="Blank Profile", email="blank@example.com"),
             "skierType": "",
             "birthday": "",
-            "weightKg": "",
-            "heightCm": "",
+            "weightLbs": "",
+            "heightIn": "",
             "bootSoleLengthMm": "",
         },
     )
 
     assert response.status_code == 422
     assert response.json()["detail"] == (
-        "DIN requires skierType, birthday, weightKg, heightCm, and bootSoleLengthMm."
+        "DIN requires skierType, birthday, weightLbs, heightIn, and bootSoleLengthMm."
     )
 
 
@@ -307,7 +347,7 @@ def test_list_users_returns_multiple_users():
     )
     second_response = client.put(
         "/api/users/user-two",
-        json=_valid_user_payload(name="User Two", email="two@example.com", weight_kg=72, height_cm=180),
+        json=_valid_user_payload(name="User Two", email="two@example.com", weight_lbs=158.7, height_in=70.9),
     )
 
     assert first_response.status_code == 201
@@ -320,3 +360,213 @@ def test_list_users_returns_multiple_users():
     returned_ids = {user["id"] for user in payload["users"]}
 
     assert returned_ids == {"user-one", "user-two"}
+
+
+def test_assess_response_model_has_required_fields():
+    from backend.models.recommendation import Recommendation
+
+    r = AssessmentResponse(
+        equipmentType="skis",
+        brand="Rossignol",
+        safeToSki=True,
+        severity=2,
+        verdict="DIY",
+        shopCostEstimate="$20-$40",
+        timeEstimate="30 minutes",
+        skillLevel="beginner",
+        repairSteps=["Clean the base", "Apply P-tex"],
+        partsList=[Part(name="P-tex candle", searchQuery="Swix P-tex ski base repair candle")],
+        youtubeSuggestions=["how to patch ski base gouge DIY"],
+    )
+
+    assert r.safeToSki is True
+    assert r.severity == 2
+    assert r.verdict == "DIY"
+    assert r.recommendations == []
+    assert r.partsList[0].searchQuery == "Swix P-tex ski base repair candle"
+
+
+def test_retriever_returns_chunks_above_threshold():
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from backend.services.retriever import retrieve_relevant_chunks
+
+    mock_db = AsyncMock()
+    mock_rows = [
+        MagicMock(chunk_text="P-tex candles work for surface scratches", metadata={"upvotes": 45}),
+        MagicMock(chunk_text="Clean base before applying any filler", metadata=None),
+    ]
+    mock_db.execute.return_value.fetchall.return_value = mock_rows
+
+    with patch("backend.services.retriever.TextEmbeddingModel") as mock_model_cls:
+        mock_model = MagicMock()
+        mock_model_cls.from_pretrained.return_value = mock_model
+        mock_model.get_embeddings.return_value = [MagicMock(values=[0.1] * 768)]
+
+        with patch("backend.services.retriever.vertexai.init"):
+            chunks = asyncio.run(retrieve_relevant_chunks(mock_db, "base gouge rossignol skis"))
+
+    assert len(chunks) == 2
+    assert chunks[0]["chunk_text"] == "P-tex candles work for surface scratches"
+    assert chunks[0]["metadata"] == {"upvotes": 45}
+    assert chunks[1]["metadata"] is None
+
+
+def test_retriever_returns_empty_when_no_rows():
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from backend.services.retriever import retrieve_relevant_chunks
+
+    mock_db = AsyncMock()
+    mock_db.execute.return_value.fetchall.return_value = []
+
+    with patch("backend.services.retriever.TextEmbeddingModel") as mock_model_cls:
+        mock_model = MagicMock()
+        mock_model_cls.from_pretrained.return_value = mock_model
+        mock_model.get_embeddings.return_value = [MagicMock(values=[0.1] * 768)]
+
+        with patch("backend.services.retriever.vertexai.init"):
+            chunks = asyncio.run(retrieve_relevant_chunks(mock_db, "general ski question"))
+
+    assert chunks == []
+
+
+def test_generator_returns_assessment_response():
+    import asyncio
+    import json
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from backend.models.assesment import AssessmentRequest, AssessmentResponse
+    from backend.services.generator import generate_assessment
+
+    fake_llm_output = {
+        "safeToSki": True,
+        "severity": 2,
+        "verdict": "DIY",
+        "shopCostEstimate": "$20-$40",
+        "timeEstimate": "30 minutes",
+        "skillLevel": "beginner",
+        "repairSteps": ["Clean the base with base cleaner", "Melt P-tex into the gouge"],
+        "partsList": [{"name": "P-tex candle", "searchQuery": "Swix P-tex ski base repair candle"}],
+        "youtubeSuggestions": ["how to patch ski base gouge DIY"],
+    }
+
+    request = AssessmentRequest(
+        equipmentType="skis",
+        brand="Rossignol",
+        terrain="hardpack",
+        issueDescription="small base gouge",
+        daysSinceWax=8,
+        daysSinceEdgeWork=5,
+        coreShots=1,
+    )
+
+    mock_response = MagicMock()
+    mock_response.text = json.dumps(fake_llm_output)
+
+    with patch("backend.services.generator.genai.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+
+        result = asyncio.run(generate_assessment(request, []))
+
+    assert isinstance(result, AssessmentResponse)
+    assert result.safeToSki is True
+    assert result.severity == 2
+    assert result.verdict == "DIY"
+    assert result.recommendations == []
+    assert result.partsList[0].name == "P-tex candle"
+
+
+def test_generator_includes_engagement_metadata_in_prompt():
+    import asyncio
+    import json
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from backend.models.assesment import AssessmentRequest
+    from backend.services.generator import generate_assessment
+
+    fake_llm_output = {
+        "safeToSki": True, "severity": 1, "verdict": "DIY",
+        "shopCostEstimate": "$0", "timeEstimate": "10 minutes",
+        "skillLevel": "beginner", "repairSteps": ["Wax it"],
+        "partsList": [], "youtubeSuggestions": [],
+    }
+
+    request = AssessmentRequest(equipmentType="skis", brand="K2", issueDescription="needs wax")
+    chunks = [
+        {"chunk_text": "Hot wax lasts longer than rub-on", "metadata": {"upvotes": 200, "reply_count": 15, "reply_sentiment": "mostly agreeing"}},
+        {"chunk_text": "Use a wax appropriate for snow temperature", "metadata": None},
+    ]
+
+    mock_response = MagicMock()
+    mock_response.text = json.dumps(fake_llm_output)
+
+    captured_contents = []
+
+    async def fake_generate(**kwargs):
+        captured_contents.append(kwargs.get("contents", ""))
+        return mock_response
+
+    with patch("backend.services.generator.genai.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.aio.models.generate_content = fake_generate
+
+        asyncio.run(generate_assessment(request, chunks))
+
+    prompt = captured_contents[0]
+    assert "200 upvotes" in prompt
+    assert "15 replies" in prompt
+    assert "mostly agreeing" in prompt
+    assert "Authoritative reference" in prompt
+
+
+def test_orchestrator_merges_rule_based_recommendations():
+    import asyncio
+    from unittest.mock import AsyncMock, patch
+
+    from backend.models.assesment import AssessmentRequest, AssessmentResponse, Part
+    from backend.services.assessment import build_assessment_response
+
+    mock_llm_response = AssessmentResponse(
+        equipmentType="skis",
+        brand="Rossignol",
+        safeToSki=True,
+        severity=2,
+        verdict="DIY",
+        shopCostEstimate="$20-$40",
+        timeEstimate="30 minutes",
+        skillLevel="beginner",
+        repairSteps=["Clean the base", "Apply P-tex"],
+        partsList=[Part(name="P-tex candle", searchQuery="Swix P-tex ski base repair candle")],
+        youtubeSuggestions=["how to patch ski base gouge DIY"],
+        recommendations=[],
+    )
+
+    request = AssessmentRequest(
+        equipmentType="skis",
+        brand="Rossignol",
+        terrain="hardpack",
+        issueDescription="base gouge",
+        daysSinceWax=14,
+        daysSinceEdgeWork=5,
+        coreShots=0,
+    )
+
+    mock_db = AsyncMock()
+
+    with patch("backend.services.assessment.retrieve_relevant_chunks", new_callable=AsyncMock) as mock_retrieve, \
+         patch("backend.services.assessment.generate_assessment", new_callable=AsyncMock) as mock_generate:
+
+        mock_retrieve.return_value = []
+        mock_generate.return_value = mock_llm_response
+
+        result = asyncio.run(build_assessment_response(request, mock_db))
+
+    assert result.safeToSki is True
+    assert result.severity == 2
+    assert any("Wax" in r.title for r in result.recommendations)
