@@ -28,6 +28,7 @@ def _valid_user_payload(*, name: str, email: str, weight_lbs: float = 151.0, hei
         "weightLbs": weight_lbs,
         "heightIn": height_in,
         "bootSoleLengthMm": 295,
+        "password": "TestPass123!",
     }
 
 
@@ -135,6 +136,7 @@ def test_user_router_supports_crud_flow():
             "weightLbs": 151.0,
             "heightIn": 67.7,
             "bootSoleLengthMm": 295,
+            "password": "TestPass123!",
         },
     )
 
