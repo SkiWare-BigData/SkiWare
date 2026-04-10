@@ -21,4 +21,4 @@ COPY --from=frontend-build /frontend/dist ./frontend/dist
 EXPOSE 8080
 
 # Run migrations then start the server
-CMD ["sh", "-c", "alembic upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port 8080"]
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8080"]
