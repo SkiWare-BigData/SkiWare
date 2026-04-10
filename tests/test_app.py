@@ -3,6 +3,7 @@ from datetime import date
 from fastapi.testclient import TestClient
 
 from backend.main import app
+from backend.models.assesment import AssessmentResponse, Part
 from backend.services.calculate_DIN import calculate_din
 
 
@@ -18,7 +19,6 @@ def _valid_user_payload(*, name: str, email: str, weight_lbs: float = 151.0, hei
     return {
         "name": name,
         "email": email,
-        "password": "TestPass123",
         "preferredSport": "Skier",
         "skillLevel": "advanced",
         "equipment": [{"name": "Rossignol Experience 88", "length": "180", "width": "88"}],
@@ -28,75 +28,103 @@ def _valid_user_payload(*, name: str, email: str, weight_lbs: float = 151.0, hei
         "weightLbs": weight_lbs,
         "heightIn": height_in,
         "bootSoleLengthMm": 295,
+        "password": "TestPass123!",
     }
 
 
-def test_assess_endpoint_returns_recommendations():
-    response = client.post(
-        "/api/assess",
-        json={
-            "equipmentType": "skis",
-            "brand": "Rossignol",
-            "model": "Experience 88",
-            "lengthCm": 180,
-            "age": "1-2 years",
-            "snowCondition": "ice",
-            "terrainType": "groomed",
-            "skillLevel": "advanced",
-            "heightIn": 69,
-            "weightLbs": 155,
-            "daysSinceWax": 14,
-            "daysSinceEdgeWork": 12,
-            "coreShots": 2,
-            "issueDescription": "A few scratches underfoot after early-season rocks.",
-        },
+def _mock_llm_response(equipmentType: str = "skis", brand: str = "Rossignol") -> AssessmentResponse:
+    return AssessmentResponse(
+        equipmentType=equipmentType,
+        brand=brand,
+        safeToSki=True,
+        severity=2,
+        verdict="DIY",
+        shopCostEstimate="$20-$40",
+        timeEstimate="30 minutes",
+        skillLevel="beginner",
+        repairSteps=["Clean the base with base cleaner", "Melt P-tex into the gouge"],
+        partsList=[Part(name="P-tex candle", searchQuery="Swix P-tex ski base repair candle")],
+        youtubeSuggestions=["how to patch ski base gouge DIY"],
+        recommendations=[],
     )
 
+
+def test_assess_endpoint_returns_full_mvp_response():
+    from unittest.mock import AsyncMock, patch
+
+    with patch("backend.services.assessment.retrieve_relevant_chunks", new_callable=AsyncMock) as mock_retrieve, \
+         patch("backend.services.assessment.generate_assessment", new_callable=AsyncMock) as mock_generate:
+
+        mock_retrieve.return_value = []
+        mock_generate.return_value = _mock_llm_response()
+
+        response = client.post(
+            "/api/assess",
+            json={
+                "equipmentType": "skis",
+                "brand": "Rossignol",
+                "terrain": "ice-hardpack",
+                "style": "both",
+                "daysSinceWax": 14,
+                "daysSinceEdgeWork": 12,
+                "coreShots": 2,
+                "issueDescription": "A few scratches underfoot after early-season rocks.",
+            },
+        )
+
     assert response.status_code == 200
-
     payload = response.json()
-
     assert payload["equipmentType"] == "skis"
     assert payload["brand"] == "Rossignol"
-    assert payload["snowCondition"] == "ice"
-    assert payload["terrainType"] == "groomed"
-    assert payload["skillLevel"] == "advanced"
-    assert payload["daysSinceWax"] == 14
-    assert payload["daysSinceEdgeWork"] == 12
-    assert len(payload["recommendations"]) >= 3
-    assert all("title" in recommendation for recommendation in payload["recommendations"])
-    assert len(payload["tips"]) == 5
+    assert payload["safeToSki"] is True
+    assert 1 <= payload["severity"] <= 5
+    assert payload["verdict"] in ("DIY", "SHOP")
+    assert len(payload["repairSteps"]) > 0
+    assert len(payload["partsList"]) > 0
+    assert len(payload["youtubeSuggestions"]) > 0
+    # daysSinceWax=14 and coreShots=2 both trigger rule-based recommendations
+    assert len(payload["recommendations"]) >= 2
+    assert all("title" in r for r in payload["recommendations"])
 
 
 def test_assess_endpoint_accepts_blank_optional_numeric_fields():
-    response = client.post(
-        "/api/assess",
-        json={
-            "equipmentType": "snowboard",
-            "brand": "Burton",
-            "lengthCm": "",
-            "heightIn": "",
-            "weightLbs": "",
-            "snowCondition": "powder",
-            "terrainType": "ungroomed",
-            "skillLevel": "intermediate",
-            "daysSinceWax": 2,
-            "daysSinceEdgeWork": 3,
-            "coreShots": 0,
-            "issueDescription": "",
-        },
-    )
+    from unittest.mock import AsyncMock, patch
+
+    with patch("backend.services.assessment.retrieve_relevant_chunks", new_callable=AsyncMock) as mock_retrieve, \
+         patch("backend.services.assessment.generate_assessment", new_callable=AsyncMock) as mock_generate:
+
+        mock_retrieve.return_value = []
+        mock_generate.return_value = _mock_llm_response(equipmentType="snowboard", brand="Burton")
+
+        response = client.post(
+            "/api/assess",
+            json={
+                "equipmentType": "snowboard",
+                "brand": "Burton",
+                "length": "",
+                "height": "",
+                "weight": "",
+                "terrain": "powder",
+                "style": "off-piste",
+                "daysSinceWax": 2,
+                "daysSinceEdgeWork": 3,
+                "coreShots": 0,
+                "issueDescription": "",
+            },
+        )
 
     assert response.status_code == 200
-    assert response.json()["recommendations"][0]["severity"] == "LOW"
+    payload = response.json()
+    assert payload["equipmentType"] == "snowboard"
+    # daysSinceWax=2 and coreShots=0 produce no rule-based recommendations
+    assert payload["recommendations"] == []
 
 
-def test_assess_endpoint_rejects_invalid_enum_value():
+def test_assess_endpoint_rejects_invalid_equipment_type():
     response = client.post(
         "/api/assess",
         json={
-            "equipmentType": "skis",
-            "snowCondition": "slush",
+            "equipmentType": "toboggan",
         },
     )
 
@@ -116,7 +144,6 @@ def test_user_router_supports_crud_flow():
         json={
             "name": "Ava Sender",
             "email": "AVA@EXAMPLE.COM",
-            "password": "TestPass123",
             "preferredSport": "Skier",
             "skillLevel": "advanced",
             "equipment": [{"name": "Rossignol Experience 88", "length": "180", "width": "88"}],
@@ -126,6 +153,7 @@ def test_user_router_supports_crud_flow():
             "weightLbs": 151.0,
             "heightIn": 67.7,
             "bootSoleLengthMm": 295,
+            "password": "TestPass123!",
         },
     )
 
@@ -349,3 +377,213 @@ def test_list_users_returns_multiple_users():
     returned_ids = {user["id"] for user in payload["users"]}
 
     assert returned_ids == {"user-one", "user-two"}
+
+
+def test_assess_response_model_has_required_fields():
+    from backend.models.recommendation import Recommendation
+
+    r = AssessmentResponse(
+        equipmentType="skis",
+        brand="Rossignol",
+        safeToSki=True,
+        severity=2,
+        verdict="DIY",
+        shopCostEstimate="$20-$40",
+        timeEstimate="30 minutes",
+        skillLevel="beginner",
+        repairSteps=["Clean the base", "Apply P-tex"],
+        partsList=[Part(name="P-tex candle", searchQuery="Swix P-tex ski base repair candle")],
+        youtubeSuggestions=["how to patch ski base gouge DIY"],
+    )
+
+    assert r.safeToSki is True
+    assert r.severity == 2
+    assert r.verdict == "DIY"
+    assert r.recommendations == []
+    assert r.partsList[0].searchQuery == "Swix P-tex ski base repair candle"
+
+
+def test_retriever_returns_chunks_above_threshold():
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from backend.services.retriever import retrieve_relevant_chunks
+
+    mock_db = AsyncMock()
+    mock_rows = [
+        MagicMock(chunk_text="P-tex candles work for surface scratches", metadata={"upvotes": 45}),
+        MagicMock(chunk_text="Clean base before applying any filler", metadata=None),
+    ]
+    mock_db.execute.return_value.fetchall.return_value = mock_rows
+
+    with patch("backend.services.retriever.TextEmbeddingModel") as mock_model_cls:
+        mock_model = MagicMock()
+        mock_model_cls.from_pretrained.return_value = mock_model
+        mock_model.get_embeddings.return_value = [MagicMock(values=[0.1] * 768)]
+
+        with patch("backend.services.retriever.vertexai.init"):
+            chunks = asyncio.run(retrieve_relevant_chunks(mock_db, "base gouge rossignol skis"))
+
+    assert len(chunks) == 2
+    assert chunks[0]["chunk_text"] == "P-tex candles work for surface scratches"
+    assert chunks[0]["metadata"] == {"upvotes": 45}
+    assert chunks[1]["metadata"] is None
+
+
+def test_retriever_returns_empty_when_no_rows():
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from backend.services.retriever import retrieve_relevant_chunks
+
+    mock_db = AsyncMock()
+    mock_db.execute.return_value.fetchall.return_value = []
+
+    with patch("backend.services.retriever.TextEmbeddingModel") as mock_model_cls:
+        mock_model = MagicMock()
+        mock_model_cls.from_pretrained.return_value = mock_model
+        mock_model.get_embeddings.return_value = [MagicMock(values=[0.1] * 768)]
+
+        with patch("backend.services.retriever.vertexai.init"):
+            chunks = asyncio.run(retrieve_relevant_chunks(mock_db, "general ski question"))
+
+    assert chunks == []
+
+
+def test_generator_returns_assessment_response():
+    import asyncio
+    import json
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from backend.models.assesment import AssessmentRequest, AssessmentResponse
+    from backend.services.generator import generate_assessment
+
+    fake_llm_output = {
+        "safeToSki": True,
+        "severity": 2,
+        "verdict": "DIY",
+        "shopCostEstimate": "$20-$40",
+        "timeEstimate": "30 minutes",
+        "skillLevel": "beginner",
+        "repairSteps": ["Clean the base with base cleaner", "Melt P-tex into the gouge"],
+        "partsList": [{"name": "P-tex candle", "searchQuery": "Swix P-tex ski base repair candle"}],
+        "youtubeSuggestions": ["how to patch ski base gouge DIY"],
+    }
+
+    request = AssessmentRequest(
+        equipmentType="skis",
+        brand="Rossignol",
+        terrain="hardpack",
+        issueDescription="small base gouge",
+        daysSinceWax=8,
+        daysSinceEdgeWork=5,
+        coreShots=1,
+    )
+
+    mock_response = MagicMock()
+    mock_response.text = json.dumps(fake_llm_output)
+
+    with patch("backend.services.generator.genai.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+
+        result = asyncio.run(generate_assessment(request, []))
+
+    assert isinstance(result, AssessmentResponse)
+    assert result.safeToSki is True
+    assert result.severity == 2
+    assert result.verdict == "DIY"
+    assert result.recommendations == []
+    assert result.partsList[0].name == "P-tex candle"
+
+
+def test_generator_includes_engagement_metadata_in_prompt():
+    import asyncio
+    import json
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from backend.models.assesment import AssessmentRequest
+    from backend.services.generator import generate_assessment
+
+    fake_llm_output = {
+        "safeToSki": True, "severity": 1, "verdict": "DIY",
+        "shopCostEstimate": "$0", "timeEstimate": "10 minutes",
+        "skillLevel": "beginner", "repairSteps": ["Wax it"],
+        "partsList": [], "youtubeSuggestions": [],
+    }
+
+    request = AssessmentRequest(equipmentType="skis", brand="K2", issueDescription="needs wax")
+    chunks = [
+        {"chunk_text": "Hot wax lasts longer than rub-on", "metadata": {"upvotes": 200, "reply_count": 15, "reply_sentiment": "mostly agreeing"}},
+        {"chunk_text": "Use a wax appropriate for snow temperature", "metadata": None},
+    ]
+
+    mock_response = MagicMock()
+    mock_response.text = json.dumps(fake_llm_output)
+
+    captured_contents = []
+
+    async def fake_generate(**kwargs):
+        captured_contents.append(kwargs.get("contents", ""))
+        return mock_response
+
+    with patch("backend.services.generator.genai.Client") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.aio.models.generate_content = fake_generate
+
+        asyncio.run(generate_assessment(request, chunks))
+
+    prompt = captured_contents[0]
+    assert "200 upvotes" in prompt
+    assert "15 replies" in prompt
+    assert "mostly agreeing" in prompt
+    assert "Authoritative reference" in prompt
+
+
+def test_orchestrator_merges_rule_based_recommendations():
+    import asyncio
+    from unittest.mock import AsyncMock, patch
+
+    from backend.models.assesment import AssessmentRequest, AssessmentResponse, Part
+    from backend.services.assessment import build_assessment_response
+
+    mock_llm_response = AssessmentResponse(
+        equipmentType="skis",
+        brand="Rossignol",
+        safeToSki=True,
+        severity=2,
+        verdict="DIY",
+        shopCostEstimate="$20-$40",
+        timeEstimate="30 minutes",
+        skillLevel="beginner",
+        repairSteps=["Clean the base", "Apply P-tex"],
+        partsList=[Part(name="P-tex candle", searchQuery="Swix P-tex ski base repair candle")],
+        youtubeSuggestions=["how to patch ski base gouge DIY"],
+        recommendations=[],
+    )
+
+    request = AssessmentRequest(
+        equipmentType="skis",
+        brand="Rossignol",
+        terrain="hardpack",
+        issueDescription="base gouge",
+        daysSinceWax=14,
+        daysSinceEdgeWork=5,
+        coreShots=0,
+    )
+
+    mock_db = AsyncMock()
+
+    with patch("backend.services.assessment.retrieve_relevant_chunks", new_callable=AsyncMock) as mock_retrieve, \
+         patch("backend.services.assessment.generate_assessment", new_callable=AsyncMock) as mock_generate:
+
+        mock_retrieve.return_value = []
+        mock_generate.return_value = mock_llm_response
+
+        result = asyncio.run(build_assessment_response(request, mock_db))
+
+    assert result.safeToSki is True
+    assert result.severity == 2
+    assert any("Wax" in r.title for r in result.recommendations)

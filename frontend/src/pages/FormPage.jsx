@@ -101,14 +101,14 @@ export default function FormPage({ onSubmit, onCancel }) {
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="length">Length (cm)</label>
+                <label htmlFor="length">Length (in)</label>
                 <input
                   type="number"
                   id="length"
                   name="length"
                   value={formData.length}
                   onChange={handleChange}
-                  placeholder="e.g. 170"
+                  placeholder="e.g. 67"
                 />
               </div>
             </div>
