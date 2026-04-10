@@ -5,6 +5,11 @@ from pydantic import BaseModel, Field, field_validator
 from backend.models.recommendation import Recommendation
 
 
+class Part(BaseModel):
+    name: str
+    searchQuery: str  # generic product string — frontend builds links for Amazon, REI, evo, Backcountry, Peter Glenn
+
+
 class AssessmentRequest(BaseModel):
     equipmentType: Literal["skis", "snowboard"] = "skis"
     brand: str = ""
@@ -30,9 +35,13 @@ class AssessmentRequest(BaseModel):
 class AssessmentResponse(BaseModel):
     equipmentType: Literal["skis", "snowboard"]
     brand: str
-    terrain: str
-    style: str
-    daysSinceWax: int
-    daysSinceEdgeWork: int
-    recommendations: list[Recommendation]
-    tips: list[str]
+    safeToSki: bool
+    severity: int = Field(ge=1, le=5)
+    verdict: Literal["DIY", "SHOP"]
+    shopCostEstimate: str
+    timeEstimate: str
+    skillLevel: Literal["beginner", "intermediate", "advanced"]
+    repairSteps: list[str]
+    partsList: list[Part]
+    youtubeSuggestions: list[str]
+    recommendations: list[Recommendation] = []  # set by orchestrator, not Gemini

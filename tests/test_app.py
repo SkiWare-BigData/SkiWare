@@ -319,3 +319,28 @@ def test_list_users_returns_multiple_users():
     returned_ids = {user["id"] for user in payload["users"]}
 
     assert returned_ids == {"user-one", "user-two"}
+
+
+def test_assess_response_model_has_required_fields():
+    from backend.models.assesment import AssessmentResponse, Part
+    from backend.models.recommendation import Recommendation
+
+    r = AssessmentResponse(
+        equipmentType="skis",
+        brand="Rossignol",
+        safeToSki=True,
+        severity=2,
+        verdict="DIY",
+        shopCostEstimate="$20-$40",
+        timeEstimate="30 minutes",
+        skillLevel="beginner",
+        repairSteps=["Clean the base", "Apply P-tex"],
+        partsList=[Part(name="P-tex candle", searchQuery="Swix P-tex ski base repair candle")],
+        youtubeSuggestions=["how to patch ski base gouge DIY"],
+    )
+
+    assert r.safeToSki is True
+    assert r.severity == 2
+    assert r.verdict == "DIY"
+    assert r.recommendations == []
+    assert r.partsList[0].searchQuery == "Swix P-tex ski base repair candle"
