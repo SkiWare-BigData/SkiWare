@@ -3,6 +3,7 @@ from datetime import date
 from fastapi.testclient import TestClient
 
 from backend.main import app
+from backend.models.assesment import AssessmentResponse, Part
 from backend.services.calculate_DIN import calculate_din
 
 
@@ -30,8 +31,7 @@ def _valid_user_payload(*, name: str, email: str, weight_lbs: float = 151.0, hei
     }
 
 
-def _mock_llm_response(equipmentType: str = "skis", brand: str = "Rossignol") -> "AssessmentResponse":
-    from backend.models.assesment import AssessmentResponse, Part
+def _mock_llm_response(equipmentType: str = "skis", brand: str = "Rossignol") -> AssessmentResponse:
     return AssessmentResponse(
         equipmentType=equipmentType,
         brand=brand,
@@ -361,7 +361,6 @@ def test_list_users_returns_multiple_users():
 
 
 def test_assess_response_model_has_required_fields():
-    from backend.models.assesment import AssessmentResponse, Part
     from backend.models.recommendation import Recommendation
 
     r = AssessmentResponse(
