@@ -4,23 +4,29 @@ from pydantic import BaseModel, Field, field_validator
 
 
 SkillLevel = Literal["beginner", "intermediate", "advanced", "expert"]
-EquipmentPreference = Literal["skis", "snowboard", "both"]
 TerrainPreference = Literal["groomers", "park", "powder", "backcountry", "hybrid"]
 SnowSport = Literal["Skier", "Snowboarder"]
+
+
+class EquipmentItem(BaseModel):
+    name: str = ""       # brand + model, e.g. "Rossignol Experience 88"
+    length: str = ""     # e.g. "180" (cm) or "180cm"
+    width: str = ""      # e.g. "88" (mm waist) or "88mm"
 
 
 class UserWrite(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     email: str = Field(min_length=5, max_length=254)
-    sport: SnowSport = "Skier"
+    preferredSport: SnowSport = "Skier"
     skillLevel: SkillLevel = "intermediate"
-    preferredEquipment: EquipmentPreference = "skis"
+    equipment: list[EquipmentItem] = Field(default_factory=list)
     preferredTerrain: TerrainPreference = "hybrid"
     skierType: int | None = Field(default=None, ge=1, le=3)
     birthday: date | None = None
-    weightKg: float | None = Field(default=None, gt=0, le=300)
-    heightCm: float | None = Field(default=None, gt=0, le=300)
+    weightLbs: float | None = Field(default=None, gt=0, le=661)
+    heightIn: float | None = Field(default=None, gt=0, le=118)
     bootSoleLengthMm: int | None = Field(default=None, ge=200, le=400)
+    password: str | None = Field(default=None, min_length=8, max_length=128)
 
     @field_validator("name", "email")
     @classmethod
@@ -37,7 +43,7 @@ class UserWrite(BaseModel):
             raise ValueError("value must be a valid email address")
         return value.lower()
 
-    @field_validator("skierType", "birthday", "weightKg", "heightCm", "bootSoleLengthMm", mode="before")
+    @field_validator("skierType", "birthday", "weightLbs", "heightIn", "bootSoleLengthMm", mode="before")
     @classmethod
     def empty_profile_value_to_none(cls, value: object) -> object:
         if value == "":
@@ -59,6 +65,7 @@ class UserResponse(UserWrite):
     DIN: float
     createdAt: datetime
     updatedAt: datetime
+    password: str | None = Field(default=None, exclude=True)  # never serialized
 
 
 class UserListResponse(BaseModel):

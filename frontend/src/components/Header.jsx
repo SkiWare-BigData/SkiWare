@@ -1,10 +1,11 @@
 const navItems = [
   { id: 'home', label: 'Home' },
   { id: 'form', label: 'Assessment' },
+  { id: 'findShop', label: 'Find a Shop' },
   { id: 'myfit', label: 'MyFit' },
 ];
 
-export default function Header({ currentPage, onNavigate }) {
+export default function Header({ currentPage, onNavigate, currentUser, onLogout }) {
   return (
     <header className="header">
       <div className="header-content">
@@ -26,7 +27,7 @@ export default function Header({ currentPage, onNavigate }) {
               key={item.id}
               type="button"
               className={`nav-link ${currentPage === item.id ? 'active' : ''}`}
-              onClick={() => item.id !== 'myfit' && onNavigate(item.id)}
+              onClick={() => !['myfit'].includes(item.id) && onNavigate(item.id)}
             >
               {item.label}
             </button>
@@ -34,12 +35,37 @@ export default function Header({ currentPage, onNavigate }) {
         </nav>
 
         <div className="header-actions">
-          <button type="button" className="auth-link">
-            Login
-          </button>
-          <button type="button" className="auth-button">
-            Sign Up
-          </button>
+          {currentUser ? (
+            <>
+              <button
+                type="button"
+                className="auth-link"
+                onClick={() => onNavigate('user')}
+              >
+                {currentUser.name.split(' ')[0]}
+              </button>
+              <button type="button" className="auth-button" onClick={onLogout}>
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="auth-link"
+                onClick={() => onNavigate('user')}
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                className="auth-button"
+                onClick={() => onNavigate('user')}
+              >
+                Sign Up
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>

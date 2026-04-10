@@ -1,19 +1,12 @@
 from datetime import date
 
-import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import app
 from backend.services.calculate_DIN import calculate_din
-from backend.services.users import reset_user_store
 
 
 client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def clear_user_store() -> None:
-    reset_user_store()
 
 
 def _age_for_birthday(birthday: date) -> int:
@@ -21,18 +14,18 @@ def _age_for_birthday(birthday: date) -> int:
     return today.year - birthday.year - ((today.month, today.day) < (birthday.month, birthday.day))
 
 
-def _valid_user_payload(*, name: str, email: str, weight_kg: float = 68.5, height_cm: float = 172) -> dict[str, object]:
+def _valid_user_payload(*, name: str, email: str, weight_lbs: float = 151.0, height_in: float = 67.7) -> dict[str, object]:
     return {
         "name": name,
         "email": email,
-        "sport": "Skier",
+        "preferredSport": "Skier",
         "skillLevel": "advanced",
-        "preferredEquipment": "skis",
+        "equipment": [{"name": "Rossignol Experience 88", "length": "180", "width": "88"}],
         "preferredTerrain": "powder",
         "skierType": 3,
         "birthday": "1998-02-14",
-        "weightKg": weight_kg,
-        "heightCm": height_cm,
+        "weightLbs": weight_lbs,
+        "heightIn": height_in,
         "bootSoleLengthMm": 295,
     }
 
@@ -94,14 +87,14 @@ def test_user_router_supports_crud_flow():
         json={
             "name": "Ava Sender",
             "email": "AVA@EXAMPLE.COM",
-            "sport": "Skier",
+            "preferredSport": "Skier",
             "skillLevel": "advanced",
-            "preferredEquipment": "skis",
+            "equipment": [{"name": "Rossignol Experience 88", "length": "180", "width": "88"}],
             "preferredTerrain": "powder",
             "skierType": 3,
             "birthday": birthday.isoformat(),
-            "weightKg": 68.5,
-            "heightCm": 172,
+            "weightLbs": 151.0,
+            "heightIn": 67.7,
             "bootSoleLengthMm": 295,
         },
     )
@@ -112,15 +105,15 @@ def test_user_router_supports_crud_flow():
     user_id = "ava-sender"
 
     assert created_user["email"] == "ava@example.com"
-    assert created_user["sport"] == "Skier"
+    assert created_user["preferredSport"] == "Skier"
     assert created_user["skillLevel"] == "advanced"
     assert created_user["skierType"] == 3
     assert created_user["birthday"] == birthday.isoformat()
-    assert created_user["weightKg"] == 68.5
-    assert created_user["heightCm"] == 172.0
+    assert created_user["weightLbs"] == 151.0
+    assert created_user["heightIn"] == 67.7
     assert created_user["bootSoleLengthMm"] == 295
     assert created_user["DIN"] == calculate_din(
-        weight=68.5,
+        weight=151.0 * 0.453592,
         boot_sole_length_mm=295,
         age=_age_for_birthday(birthday),
         skier_type=3,
@@ -139,25 +132,31 @@ def test_user_router_supports_crud_flow():
         json={
             "name": "Ava Sender",
             "email": "ava@example.com",
-            "sport": "Skier",
+            "preferredSport": "Skier",
             "skillLevel": "advanced",
-            "preferredEquipment": "both",
+            "equipment": [
+                {"name": "Rossignol Experience 88", "length": "180", "width": "88"},
+                {"name": "K2 Mindbender 108Ti", "length": "184", "width": "108"},
+            ],
             "preferredTerrain": "backcountry",
             "skierType": 3,
             "birthday": birthday.isoformat(),
-            "weightKg": 72,
-            "heightCm": 174,
+            "weightLbs": 158.7,
+            "heightIn": 68.5,
             "bootSoleLengthMm": 295,
         },
     )
     assert update_response.status_code == 200
-    assert update_response.json()["sport"] == "Skier"
-    assert update_response.json()["preferredEquipment"] == "both"
+    assert update_response.json()["preferredSport"] == "Skier"
+    assert update_response.json()["equipment"] == [
+        {"name": "Rossignol Experience 88", "length": "180", "width": "88"},
+        {"name": "K2 Mindbender 108Ti", "length": "184", "width": "108"},
+    ]
     assert update_response.json()["preferredTerrain"] == "backcountry"
-    assert update_response.json()["weightKg"] == 72.0
-    assert update_response.json()["heightCm"] == 174.0
+    assert update_response.json()["weightLbs"] == 158.7
+    assert update_response.json()["heightIn"] == 68.5
     assert update_response.json()["DIN"] == calculate_din(
-        weight=72,
+        weight=158.7 * 0.453592,
         boot_sole_length_mm=295,
         age=_age_for_birthday(birthday),
         skier_type=3,
@@ -166,7 +165,7 @@ def test_user_router_supports_crud_flow():
     updated_detail_response = client.get(f"/api/users/{user_id}")
     assert updated_detail_response.status_code == 200
     assert updated_detail_response.json()["DIN"] == calculate_din(
-        weight=72,
+        weight=158.7 * 0.453592,
         boot_sole_length_mm=295,
         age=_age_for_birthday(birthday),
         skier_type=3,
@@ -203,9 +202,9 @@ def test_user_router_rejects_future_birthday():
         json={
             "name": "Mika Summit",
             "email": "mika@example.com",
-            "sport": "Skier",
+            "preferredSport": "Skier",
             "skillLevel": "intermediate",
-            "preferredEquipment": "skis",
+            "equipment": [{"name": "Rossignol Experience 88", "length": "180", "width": "88"}],
             "preferredTerrain": "hybrid",
             "skierType": 2,
             "birthday": "2999-01-01",
@@ -224,9 +223,9 @@ def test_user_router_requires_din_inputs_on_upsert():
         json={
             "name": "Casey Hill",
             "email": "casey@example.com",
-            "sport": "Skier",
+            "preferredSport": "Skier",
             "skillLevel": "intermediate",
-            "preferredEquipment": "skis",
+            "equipment": [{"name": "Rossignol Experience 88", "length": "180", "width": "88"}],
             "preferredTerrain": "hybrid",
         },
     )
@@ -253,7 +252,7 @@ def test_user_router_rejects_din_inputs_outside_supported_chart():
         "/api/users/out-of-range-user",
         json={
             **_valid_user_payload(name="Out Range", email="range@example.com"),
-            "weightKg": 5,
+            "weightLbs": 11.0,
         },
     )
 
@@ -267,14 +266,14 @@ def test_user_router_keeps_current_snowboarder_din_behavior():
         "/api/users/snowboarder-user",
         json={
             **_valid_user_payload(name="Board Rider", email="board@example.com"),
-            "sport": "Snowboarder",
+            "preferredSport": "Snowboarder",
         },
     )
 
     assert response.status_code == 201
-    assert response.json()["sport"] == "Snowboarder"
+    assert response.json()["preferredSport"] == "Snowboarder"
     assert response.json()["DIN"] == calculate_din(
-        weight=68.5,
+        weight=151.0 * 0.453592,
         boot_sole_length_mm=295,
         age=_age_for_birthday(birthday),
         skier_type=3,
@@ -288,15 +287,15 @@ def test_user_router_normalizes_blank_profile_inputs_before_din_validation():
             **_valid_user_payload(name="Blank Profile", email="blank@example.com"),
             "skierType": "",
             "birthday": "",
-            "weightKg": "",
-            "heightCm": "",
+            "weightLbs": "",
+            "heightIn": "",
             "bootSoleLengthMm": "",
         },
     )
 
     assert response.status_code == 422
     assert response.json()["detail"] == (
-        "DIN requires skierType, birthday, weightKg, heightCm, and bootSoleLengthMm."
+        "DIN requires skierType, birthday, weightLbs, heightIn, and bootSoleLengthMm."
     )
 
 
@@ -307,7 +306,7 @@ def test_list_users_returns_multiple_users():
     )
     second_response = client.put(
         "/api/users/user-two",
-        json=_valid_user_payload(name="User Two", email="two@example.com", weight_kg=72, height_cm=180),
+        json=_valid_user_payload(name="User Two", email="two@example.com", weight_lbs=158.7, height_in=70.9),
     )
 
     assert first_response.status_code == 201
