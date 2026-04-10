@@ -53,8 +53,11 @@ jobs:
             --cpu 1 \
             --min-instances 0 \
             --max-instances 3 \
-            --add-cloudsql-instances ${{ secrets.CLOUD_SQL_INSTANCE }} \
-            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+            --service-account ${{ secrets.CLOUD_RUN_SA }} \
+            --set-env-vars "CLOUD_SQL_INSTANCE=${{ secrets.CLOUD_SQL_INSTANCE }}" \
+            --set-env-vars "DB_USER=${{ secrets.DB_USER }}" \
+            --set-env-vars "DB_PASS=${{ secrets.DB_PASS }}" \
+            --set-env-vars "DB_NAME=${{ secrets.DB_NAME }}" \
             --set-env-vars "GOOGLE_PLACES_API_KEY=${{ secrets.GOOGLE_PLACES_API_KEY }}" \
             --set-env-vars "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" \
             --quiet

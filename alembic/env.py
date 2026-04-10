@@ -1,14 +1,11 @@
 import asyncio
-import os
 from logging.config import fileConfig
 
-from sqlalchemy import pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-from backend.database import Base
+from backend.database import Base, engine
 import backend.models.tables  # noqa: registers ORM models with Base.metadata
 
 config = context.config
@@ -18,22 +15,10 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-# Override the URL from the environment variable if set.
-db_url = os.getenv("DATABASE_URL")
-if db_url:
-    config.set_main_option("sqlalchemy.url", db_url)
-
 
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url,
-        target_metadata=target_metadata,
-        literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
-    )
-    with context.begin_transaction():
-        context.run_migrations()
+    # Offline mode not used in this project
+    raise NotImplementedError("Offline migrations not supported")
 
 
 def do_run_migrations(connection: Connection) -> None:
@@ -43,14 +28,10 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-    async with connectable.connect() as connection:
+    # Reuse the app's engine — works for both local asyncpg and Cloud SQL connector
+    async with engine.begin() as connection:
         await connection.run_sync(do_run_migrations)
-    await connectable.dispose()
+    await engine.dispose()
 
 
 def run_migrations_online() -> None:

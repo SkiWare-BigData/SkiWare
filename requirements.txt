@@ -6,3 +6,4 @@ asyncpg==0.30.0
 alembic==1.14.0
 aiosqlite==0.20.0
 bcrypt==4.2.1
+cloud-sql-python-connector[asyncpg]==1.13.0
