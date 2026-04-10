@@ -6,7 +6,7 @@
 
 **Architecture:** The backend gains a `backend/db/connection.py` module that branches on env vars — Cloud SQL Connector + IAM auth when `CLOUD_SQL_INSTANCE` is set, direct pg8000 TCP when `DB_HOST` is set (Docker). Service functions import `get_db()` internally so router signatures stay unchanged. A single `migrations/001_init.sql` creates both the `users` table and the `ski_knowledge_chunks` table (with pgvector).
 
-**Tech Stack:** pg8000, cloud-sql-python-connector, pgvector/pgvector:pg15 (Docker), GCP Cloud SQL PostgreSQL 15
+**Tech Stack:** pg8000, cloud-sql-python-connector, pgvector/pgvector:pg15 (Docker), GCP Cloud SQL PostgreSQL 15, Vertex AI text-embedding-004 (replaces Gemini API key — uses IAM auth)
 
 ---
 
@@ -15,6 +15,8 @@
 | File | Action | Purpose |
 |---|---|---|
 | `migrations/001_init.sql` | Create | Schema: users + ski_knowledge_chunks + pgvector |
+| `data_agent/pipeline/embedder.py` | Modify | Swap google-generativeai → Vertex AI (IAM auth, no API key) |
+| `data_agent/requirements.txt` | Modify | Replace google-generativeai with google-cloud-aiplatform |
 | `backend/db/__init__.py` | Create | Package marker |
 | `backend/db/connection.py` | Create | `init_connection()`, `get_db()`, `close_connection()` |
 | `backend/services/users.py` | Modify | Replace `_USER_STORE` dict with SQL |
@@ -720,6 +722,12 @@ If any test fails, check:
 
 ---
 
+---
+
+> ⏸️ **PR PAUSE POINT** — Tasks 1–8 form a complete, working unit: local Docker dev, backend wired to DB, all tests passing. Create a PR here before continuing to Tasks 9–11 (CI/CD, data_agent, Vertex AI swap).
+
+---
+
 ### Task 9: Update CI/CD Deploy Workflow
 
 **Files:**
@@ -767,15 +775,75 @@ git commit -m "feat: configure Cloud Run deploy with Cloud SQL connection and ap
 
 ---
 
-### Task 10: Run the data_agent Pipeline Against Cloud SQL
+### Task 10: Swap data_agent Embedder to Vertex AI
+
+**Files:**
+- Modify: `data_agent/pipeline/embedder.py`
+- Modify: `data_agent/requirements.txt`
+
+- [ ] **Step 1: Update `data_agent/requirements.txt`**
+
+Replace `google-generativeai==0.8.3` with `google-cloud-aiplatform>=1.38.0`:
+
+```
+google-cloud-aiplatform>=1.38.0
+requests==2.32.3
+beautifulsoup4==4.12.3
+cloud-sql-python-connector[pg8000]==1.12.1
+```
+
+- [ ] **Step 2: Replace `data_agent/pipeline/embedder.py`**
+
+```python
+import logging
+import os
+
+import vertexai
+from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
+
+logger = logging.getLogger(__name__)
+
+BATCH_SIZE = 100
+MODEL_NAME = "text-embedding-004"
+EMBEDDING_DIM = 768
+
+
+def embed_batch(texts: list[str]) -> list[list[float]]:
+    vertexai.init(
+        project=os.environ["GCP_PROJECT"],
+        location=os.environ.get("GCP_REGION", "us-central1"),
+    )
+    model = TextEmbeddingModel.from_pretrained(MODEL_NAME)
+    all_embeddings: list[list[float]] = []
+
+    for i in range(0, len(texts), BATCH_SIZE):
+        batch = texts[i : i + BATCH_SIZE]
+        logger.info(f"Embedding batch {i // BATCH_SIZE + 1} ({len(batch)} texts)")
+        inputs = [TextEmbeddingInput(text=t, task_type="RETRIEVAL_DOCUMENT") for t in batch]
+        result = model.get_embeddings(inputs)
+        all_embeddings.extend([e.values for e in result])
+
+    return all_embeddings
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add data_agent/pipeline/embedder.py data_agent/requirements.txt
+git commit -m "feat: swap data_agent embedder from Gemini API key to Vertex AI IAM auth"
+```
+
+---
+
+### Task 12: Run the data_agent Pipeline Against Cloud SQL
 
 **Files:** none (env vars + run command)
 
-The data_agent code is complete. This task sets the env vars and runs it.
+- [ ] **Step 1: Ensure Application Default Credentials are set**
 
-- [ ] **Step 1: Confirm your Gemini API key is available**
-
-Check Google AI Studio (aistudio.google.com) for your API key. You need it for the embedding step.
+```bash
+gcloud auth application-default login
+```
 
 - [ ] **Step 2: Export env vars and run the pipeline**
 
@@ -785,7 +853,8 @@ cd /Users/Matthew/Desktop/CompSci/SkiWare
 export CLOUD_SQL_INSTANCE="skiware:us-central1:skiware-db"
 export DB_NAME="skiware"
 export DB_USER="maca6216@colorado.edu"
-export GEMINI_API_KEY="<your-gemini-api-key>"
+export GCP_PROJECT="skiware"
+export GCP_REGION="us-central1"
 
 pip install -r data_agent/requirements.txt -q
 python -m data_agent
@@ -798,12 +867,6 @@ INFO data_agent.main: Processed <url> — N chunks
 INFO data_agent.main: Run complete. Total chunks upserted: N
 ```
 
-If you see `google.auth.exceptions.DefaultCredentialsError`, run:
-```bash
-gcloud auth application-default login
-```
-then re-run `python -m data_agent`.
-
 - [ ] **Step 3: Commit the data_agent module (currently untracked)**
 
 ```bash
@@ -813,7 +876,7 @@ git commit -m "feat: add data_agent RAG ingestion pipeline"
 
 ---
 
-### Task 11: Final Verification
+### Task 13: Final Verification
 
 - [ ] **Step 1: Run the full test suite one more time**
 
