@@ -40,7 +40,7 @@ def list_users() -> UserListResponse:
     cursor = conn.cursor()
     cursor.execute(f"SELECT {_SELECT_COLS} FROM users")
     rows = cursor.fetchall()
-    col_names = [col.name for col in cursor.description]
+    col_names = [col[0] for col in cursor.description]
     cursor.close()
     return UserListResponse(users=[_row_to_user_response(col_names, row) for row in rows])
 
@@ -50,7 +50,7 @@ def get_user(user_id: str) -> UserResponse | None:
     cursor = conn.cursor()
     cursor.execute(f"SELECT {_SELECT_COLS} FROM users WHERE id = %s", (user_id,))
     row = cursor.fetchone()
-    col_names = [col.name for col in cursor.description]
+    col_names = [col[0] for col in cursor.description]
     cursor.close()
     if row is None:
         return None
@@ -96,7 +96,7 @@ def upsert_user(user_id: str, payload: UserWrite, din: float) -> tuple[UserRespo
         )
 
     row = cursor.fetchone()
-    col_names = [col.name for col in cursor.description]
+    col_names = [col[0] for col in cursor.description]
     conn.commit()
     cursor.close()
     return _row_to_user_response(col_names, row), is_new
