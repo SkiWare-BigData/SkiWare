@@ -30,54 +30,93 @@ def _valid_user_payload(*, name: str, email: str, weight_lbs: float = 151.0, hei
     }
 
 
-def test_assess_endpoint_returns_recommendations():
-    response = client.post(
-        "/api/assess",
-        json={
-            "equipmentType": "skis",
-            "brand": "Rossignol",
-            "terrain": "ice-hardpack",
-            "style": "both",
-            "daysSinceWax": 14,
-            "daysSinceEdgeWork": 12,
-            "coreShots": 2,
-            "issueDescription": "A few scratches underfoot after early-season rocks.",
-        },
+def _mock_llm_response(equipmentType: str = "skis", brand: str = "Rossignol") -> "AssessmentResponse":
+    from backend.models.assesment import AssessmentResponse, Part
+    return AssessmentResponse(
+        equipmentType=equipmentType,
+        brand=brand,
+        safeToSki=True,
+        severity=2,
+        verdict="DIY",
+        shopCostEstimate="$20-$40",
+        timeEstimate="30 minutes",
+        skillLevel="beginner",
+        repairSteps=["Clean the base with base cleaner", "Melt P-tex into the gouge"],
+        partsList=[Part(name="P-tex candle", searchQuery="Swix P-tex ski base repair candle")],
+        youtubeSuggestions=["how to patch ski base gouge DIY"],
+        recommendations=[],
     )
 
+
+def test_assess_endpoint_returns_full_mvp_response():
+    from unittest.mock import AsyncMock, patch
+
+    with patch("backend.services.assessment.retrieve_relevant_chunks", new_callable=AsyncMock) as mock_retrieve, \
+         patch("backend.services.assessment.generate_assessment", new_callable=AsyncMock) as mock_generate:
+
+        mock_retrieve.return_value = []
+        mock_generate.return_value = _mock_llm_response()
+
+        response = client.post(
+            "/api/assess",
+            json={
+                "equipmentType": "skis",
+                "brand": "Rossignol",
+                "terrain": "ice-hardpack",
+                "style": "both",
+                "daysSinceWax": 14,
+                "daysSinceEdgeWork": 12,
+                "coreShots": 2,
+                "issueDescription": "A few scratches underfoot after early-season rocks.",
+            },
+        )
+
     assert response.status_code == 200
-
     payload = response.json()
-
     assert payload["equipmentType"] == "skis"
     assert payload["brand"] == "Rossignol"
-    assert payload["daysSinceWax"] == 14
-    assert payload["daysSinceEdgeWork"] == 12
-    assert len(payload["recommendations"]) >= 3
-    assert all("title" in recommendation for recommendation in payload["recommendations"])
-    assert len(payload["tips"]) == 5
+    assert payload["safeToSki"] is True
+    assert 1 <= payload["severity"] <= 5
+    assert payload["verdict"] in ("DIY", "SHOP")
+    assert len(payload["repairSteps"]) > 0
+    assert len(payload["partsList"]) > 0
+    assert len(payload["youtubeSuggestions"]) > 0
+    # daysSinceWax=14 and coreShots=2 both trigger rule-based recommendations
+    assert len(payload["recommendations"]) >= 2
+    assert all("title" in r for r in payload["recommendations"])
 
 
 def test_assess_endpoint_accepts_blank_optional_numeric_fields():
-    response = client.post(
-        "/api/assess",
-        json={
-            "equipmentType": "snowboard",
-            "brand": "Burton",
-            "length": "",
-            "height": "",
-            "weight": "",
-            "terrain": "powder",
-            "style": "off-piste",
-            "daysSinceWax": 2,
-            "daysSinceEdgeWork": 3,
-            "coreShots": 0,
-            "issueDescription": "",
-        },
-    )
+    from unittest.mock import AsyncMock, patch
+
+    with patch("backend.services.assessment.retrieve_relevant_chunks", new_callable=AsyncMock) as mock_retrieve, \
+         patch("backend.services.assessment.generate_assessment", new_callable=AsyncMock) as mock_generate:
+
+        mock_retrieve.return_value = []
+        mock_generate.return_value = _mock_llm_response(equipmentType="snowboard", brand="Burton")
+
+        response = client.post(
+            "/api/assess",
+            json={
+                "equipmentType": "snowboard",
+                "brand": "Burton",
+                "length": "",
+                "height": "",
+                "weight": "",
+                "terrain": "powder",
+                "style": "off-piste",
+                "daysSinceWax": 2,
+                "daysSinceEdgeWork": 3,
+                "coreShots": 0,
+                "issueDescription": "",
+            },
+        )
 
     assert response.status_code == 200
-    assert response.json()["recommendations"][0]["severity"] == "LOW"
+    payload = response.json()
+    assert payload["equipmentType"] == "snowboard"
+    # daysSinceWax=2 and coreShots=0 produce no rule-based recommendations
+    assert payload["recommendations"] == []
 
 
 def test_user_router_supports_crud_flow():
