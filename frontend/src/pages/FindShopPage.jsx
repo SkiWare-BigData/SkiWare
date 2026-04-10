@@ -3,7 +3,6 @@ import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Dot icons — avoids Vite/Leaflet default-icon path issues
 const shopIcon = L.divIcon({
   className: '',
   html: '<div class="map-dot map-dot-shop"></div>',
@@ -19,7 +18,6 @@ const userIcon = L.divIcon({
   iconAnchor: [9, 9],
 });
 
-// Flies to a shop when selectedShop changes
 function MapController({ selectedShop }) {
   const map = useMap();
   useEffect(() => {
@@ -75,7 +73,6 @@ export default function FindShopPage({ onBackToHome }) {
     );
   };
 
-  // Map bounds: fit user + all shops
   const mapBounds =
     userCoords && shops.length > 0
       ? [userCoords, ...shops.map((s) => [s.lat, s.lon])]
@@ -83,53 +80,53 @@ export default function FindShopPage({ onBackToHome }) {
       ? [userCoords]
       : null;
 
+  const isBusy = status === 'locating' || status === 'loading';
+
   return (
-    <div className="main-container">
-      <div className={`find-shop-page${status === 'success' ? ' find-shop-page--results' : ''}`}>
-        <h1>Find a Nearby Shop</h1>
-        <p className="find-shop-description">
-          Locate ski and sports shops near you for tuning, waxing, and repair services.
-        </p>
-
-        {status === 'idle' && (
-          <div className="find-shop-actions">
-            <button className="btn-primary" onClick={handleFindShops}>
-              Use My Location
-            </button>
-            <button className="btn-secondary" onClick={onBackToHome}>
-              Back to Home
-            </button>
-          </div>
-        )}
-
-        {(status === 'locating' || status === 'loading') && (
-          <p className="shop-status-msg">
-            {status === 'locating' ? 'Detecting your location…' : 'Searching for nearby shops…'}
-          </p>
-        )}
-
-        {status === 'error' && (
-          <div>
-            <p className="shop-error-msg">{errorMsg}</p>
-            <div className="find-shop-actions">
-              <button className="btn-primary" onClick={handleFindShops}>Try Again</button>
-              <button className="btn-secondary" onClick={onBackToHome}>Back to Home</button>
-            </div>
-          </div>
-        )}
-
-        {status === 'success' && (
-          <div className="shop-results">
-            <p className="shop-results-count">
-              {shops.length} shop{shops.length !== 1 ? 's' : ''} found nearby
+    <main className="main-container">
+      <section className="shop-page">
+        {status !== 'success' ? (
+          <div className="shop-intro">
+            <h1>Find a nearby shop</h1>
+            <p>
+              Locate ski and snowboard shops near you for tuning, waxing, and repair
+              services within 15 miles.
             </p>
+            <div className="shop-actions">
+              <button className="btn-primary" onClick={handleFindShops} disabled={isBusy}>
+                {isBusy
+                  ? status === 'locating'
+                    ? 'Detecting location…'
+                    : 'Searching…'
+                  : 'Use my location'}
+              </button>
+              <button className="btn-secondary" onClick={onBackToHome}>
+                Back to home
+              </button>
+            </div>
+            {status === 'error' && <p className="shop-error-msg">{errorMsg}</p>}
+          </div>
+        ) : (
+          <div className="shop-results">
+            <div className="shop-results-header">
+              <div className="shop-results-count">
+                {shops.length} shop{shops.length !== 1 ? 's' : ''} found
+              </div>
+              <div className="shop-actions">
+                <button className="btn-secondary" onClick={onBackToHome}>
+                  Back to home
+                </button>
+                <button className="btn-primary" onClick={handleFindShops}>
+                  Search again
+                </button>
+              </div>
+            </div>
 
-            <div className="shop-results-layout">
-              {/* ── List panel ── */}
-              <div className="shop-list-panel">
-                {shops.length === 0 ? (
-                  <p className="shop-status-msg">No shops found within 15 miles.</p>
-                ) : (
+            {shops.length === 0 ? (
+              <p className="shop-status-msg">No shops found within 15 miles.</p>
+            ) : (
+              <div className="shop-results-layout">
+                <div className="shop-list-panel">
                   <ul className="shop-list">
                     {shops.map((shop, i) => (
                       <li
@@ -144,12 +141,22 @@ export default function FindShopPage({ onBackToHome }) {
                         {shop.address && <p className="shop-detail">{shop.address}</p>}
                         <div className="shop-links">
                           {shop.phone && (
-                            <a className="shop-link" href={`tel:${shop.phone}`} onClick={(e) => e.stopPropagation()}>
+                            <a
+                              className="shop-link"
+                              href={`tel:${shop.phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               {shop.phone}
                             </a>
                           )}
                           {shop.website && (
-                            <a className="shop-link" href={shop.website} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                            <a
+                              className="shop-link"
+                              href={shop.website}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               Website
                             </a>
                           )}
@@ -157,58 +164,50 @@ export default function FindShopPage({ onBackToHome }) {
                       </li>
                     ))}
                   </ul>
+                </div>
+
+                {mapBounds && (
+                  <div className="shop-map-panel">
+                    <MapContainer
+                      bounds={mapBounds}
+                      boundsOptions={{ padding: [40, 40] }}
+                      className="shop-map"
+                      scrollWheelZoom
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+
+                      <Marker position={userCoords} icon={userIcon}>
+                        <Popup>Your location</Popup>
+                      </Marker>
+
+                      {shops.map((shop, i) => (
+                        <Marker key={i} position={[shop.lat, shop.lon]} icon={shopIcon}>
+                          <Popup>
+                            <strong>{shop.name}</strong>
+                            {shop.address && <><br />{shop.address}</>}
+                            {shop.phone && (
+                              <><br /><a href={`tel:${shop.phone}`}>{shop.phone}</a></>
+                            )}
+                            {shop.website && (
+                              <><br /><a href={shop.website} target="_blank" rel="noreferrer">Website</a></>
+                            )}
+                            <><br /><strong>{shop.distance_miles} mi away</strong></>
+                          </Popup>
+                        </Marker>
+                      ))}
+
+                      <MapController selectedShop={selectedShop} />
+                    </MapContainer>
+                  </div>
                 )}
               </div>
-
-              {/* ── Map panel ── */}
-              {mapBounds && (
-                <div className="shop-map-panel">
-                  <MapContainer
-                    bounds={mapBounds}
-                    boundsOptions={{ padding: [40, 40] }}
-                    className="shop-map"
-                    scrollWheelZoom
-                  >
-                    <TileLayer
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-
-                    {/* User location */}
-                    <Marker position={userCoords} icon={userIcon}>
-                      <Popup>Your location</Popup>
-                    </Marker>
-
-                    {/* Shop markers */}
-                    {shops.map((shop, i) => (
-                      <Marker key={i} position={[shop.lat, shop.lon]} icon={shopIcon}>
-                        <Popup>
-                          <strong>{shop.name}</strong>
-                          {shop.address && <><br />{shop.address}</>}
-                          {shop.phone && (
-                            <><br /><a href={`tel:${shop.phone}`}>{shop.phone}</a></>
-                          )}
-                          {shop.website && (
-                            <><br /><a href={shop.website} target="_blank" rel="noreferrer">Website</a></>
-                          )}
-                          <><br /><span style={{ color: '#3668ef', fontWeight: 700 }}>{shop.distance_miles} mi away</span></>
-                        </Popup>
-                      </Marker>
-                    ))}
-
-                    <MapController selectedShop={selectedShop} />
-                  </MapContainer>
-                </div>
-              )}
-            </div>
-
-            <div className="find-shop-actions" style={{ marginTop: '20px' }}>
-              <button className="btn-secondary" onClick={onBackToHome}>Back to Home</button>
-              <button className="btn-primary" onClick={handleFindShops}>Search Again</button>
-            </div>
+            )}
           </div>
         )}
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
