@@ -12,7 +12,10 @@ YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3/videos"
 # Replace with real ski repair video IDs before production use.
 # Good channels: evo ski/snowboard care, Sidecut Tuning, Peter Glenn.
 VIDEO_IDS: list[str] = [
-    # e.g. "abc123xyz"
+    "bPNPRRaHgAc",  # evo — How to Wax Your Skis
+    "jCEPSMFAL8s",  # evo — How to Tune Ski Edges
+    "r3F6KjqFHzw",  # evo — How to Repair a Ski Base
+    "3kIWuFMMLwg",  # Sidecut Tuning — Full Ski Tune Walkthrough
 ]
 
 
