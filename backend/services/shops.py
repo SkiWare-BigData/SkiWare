@@ -1,11 +1,14 @@
 import math
 import os
+import time
+import uuid
 
 import httpx
 from fastapi import HTTPException
 
 PLACES_URL = "https://places.googleapis.com/v1/places:searchText"
 SEARCH_RADIUS_M = 25000.0  # ~15 miles
+PLACES_TIMEOUT = httpx.Timeout(connect=2.0, read=6.0, write=2.0, pool=2.0)
 
 
 def _haversine_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -23,7 +26,9 @@ async def find_nearest_shops(lat: float, lon: float) -> list[dict]:
         print("[shops] ERROR: GOOGLE_PLACES_API_KEY environment variable not set")
         raise HTTPException(status_code=503, detail="GOOGLE_PLACES_API_KEY is not configured on the server.")
 
-    print(f"[shops] Request received: lat={lat}, lon={lon}")
+    request_id = uuid.uuid4().hex[:8]
+    request_started_at = time.perf_counter()
+    print(f"[shops:{request_id}] Request received: lat={lat}, lon={lon}")
 
     payload = {
         "textQuery": "ski snowboard shop rental repair",
@@ -47,21 +52,30 @@ async def find_nearest_shops(lat: float, lon: float) -> list[dict]:
         ),
     }
 
-    print(f"[shops] Sending Places API request: {payload}")
+    print(f"[shops:{request_id}] Sending Places API request: {payload}")
 
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
+        places_started_at = time.perf_counter()
+        async with httpx.AsyncClient(timeout=PLACES_TIMEOUT) as client:
             resp = await client.post(PLACES_URL, json=payload, headers=headers)
-            print(f"[shops] Places API response status: {resp.status_code}")
+            print(
+                f"[shops:{request_id}] Places API response status: {resp.status_code} "
+                f"after {round((time.perf_counter() - places_started_at) * 1000)} ms"
+            )
             if not resp.is_success:
-                print(f"[shops] Places API error body: {resp.text}")
+                print(f"[shops:{request_id}] Places API error body: {resp.text}")
             resp.raise_for_status()
+    except httpx.TimeoutException as exc:
+        elapsed_ms = round((time.perf_counter() - request_started_at) * 1000)
+        print(f"[shops:{request_id}] Places API timeout after {elapsed_ms} ms: {exc}")
+        raise HTTPException(status_code=504, detail="Places API timed out. Please try again.")
     except httpx.HTTPError as exc:
-        print(f"[shops] Places API HTTP error: {exc}")
+        elapsed_ms = round((time.perf_counter() - request_started_at) * 1000)
+        print(f"[shops:{request_id}] Places API HTTP error after {elapsed_ms} ms: {exc}")
         raise HTTPException(status_code=502, detail=f"Places API error: {exc}")
 
     places = resp.json().get("places", [])
-    print(f"[shops] Places API returned {len(places)} results")
+    print(f"[shops:{request_id}] Places API returned {len(places)} results")
 
     shops = []
     for place in places:
@@ -71,11 +85,11 @@ async def find_nearest_shops(lat: float, lon: float) -> list[dict]:
         plon = location.get("longitude")
 
         if not name or plat is None:
-            print(f"[shops] Skipping (missing name or location): {place}")
+            print(f"[shops:{request_id}] Skipping (missing name or location): {place}")
             continue
 
         dist = round(_haversine_miles(lat, lon, plat, plon), 1)
-        print(f"[shops] Adding: {name!r} at {dist} mi")
+        print(f"[shops:{request_id}] Adding: {name!r} at {dist} mi")
         shops.append({
             "name": name,
             "distance_miles": dist,
@@ -87,5 +101,8 @@ async def find_nearest_shops(lat: float, lon: float) -> list[dict]:
         })
 
     shops.sort(key=lambda s: s["distance_miles"])
-    print(f"[shops] Returning {len(shops)} shops")
+    print(
+        f"[shops:{request_id}] Returning {len(shops)} shops "
+        f"after {round((time.perf_counter() - request_started_at) * 1000)} ms"
+    )
     return shops
