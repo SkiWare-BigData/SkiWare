@@ -131,10 +131,19 @@ def test_assess_endpoint_rejects_invalid_equipment_type():
     assert response.status_code == 422
 
 
-def test_assess_endpoint_requires_equipment_type():
-    response = client.post("/api/assess", json={})
+def test_assess_endpoint_uses_default_equipment_type():
+    from unittest.mock import AsyncMock, patch
 
-    assert response.status_code == 422
+    with patch("backend.services.assessment.retrieve_relevant_chunks", new_callable=AsyncMock) as mock_retrieve, \
+         patch("backend.services.assessment.generate_assessment", new_callable=AsyncMock) as mock_generate:
+
+        mock_retrieve.return_value = []
+        mock_generate.return_value = _mock_llm_response()
+
+        response = client.post("/api/assess", json={})
+
+    assert response.status_code == 200
+    assert response.json()["equipmentType"] == "skis"
 
 
 def test_user_router_supports_crud_flow():
@@ -414,7 +423,9 @@ def test_retriever_returns_chunks_above_threshold():
         MagicMock(chunk_text="P-tex candles work for surface scratches", metadata={"upvotes": 45}),
         MagicMock(chunk_text="Clean base before applying any filler", metadata=None),
     ]
-    mock_db.execute.return_value.fetchall.return_value = mock_rows
+    mock_result = MagicMock()
+    mock_result.fetchall.return_value = mock_rows
+    mock_db.execute.return_value = mock_result
 
     with patch("backend.services.retriever.TextEmbeddingModel") as mock_model_cls:
         mock_model = MagicMock()
@@ -437,7 +448,9 @@ def test_retriever_returns_empty_when_no_rows():
     from backend.services.retriever import retrieve_relevant_chunks
 
     mock_db = AsyncMock()
-    mock_db.execute.return_value.fetchall.return_value = []
+    mock_result = MagicMock()
+    mock_result.fetchall.return_value = []
+    mock_db.execute.return_value = mock_result
 
     with patch("backend.services.retriever.TextEmbeddingModel") as mock_model_cls:
         mock_model = MagicMock()
@@ -483,7 +496,8 @@ def test_generator_returns_assessment_response():
     mock_response = MagicMock()
     mock_response.text = json.dumps(fake_llm_output)
 
-    with patch("backend.services.generator.genai.Client") as mock_client_cls:
+    with patch("backend.services.generator.genai.Client") as mock_client_cls, \
+         patch.dict("os.environ", {"GEMINI_API_KEY": "fake-key"}):
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
         mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
@@ -528,7 +542,8 @@ def test_generator_includes_engagement_metadata_in_prompt():
         captured_contents.append(kwargs.get("contents", ""))
         return mock_response
 
-    with patch("backend.services.generator.genai.Client") as mock_client_cls:
+    with patch("backend.services.generator.genai.Client") as mock_client_cls, \
+         patch.dict("os.environ", {"GEMINI_API_KEY": "fake-key"}):
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
         mock_client.aio.models.generate_content = fake_generate

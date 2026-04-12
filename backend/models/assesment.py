@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from backend.models.recommendation import Recommendation
 
@@ -23,6 +23,13 @@ class AssessmentRequest(BaseModel):
     height: int | None = None
     weight: int | None = None
     issueDescription: str = ""
+
+    @field_validator("length", "height", "weight", mode="before")
+    @classmethod
+    def empty_string_to_none(cls, value: object) -> object:
+        if value == "":
+            return None
+        return value
 
 
 class AssessmentResponse(BaseModel):
