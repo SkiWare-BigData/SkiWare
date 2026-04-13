@@ -216,18 +216,55 @@ Deployment on `main` then:
 
 ### Current Backend
 
-The initial Flask-to-FastAPI migration is complete. The current service provides:
+The service provides:
 
-1. `GET /` returning the placeholder HTML page
-2. `GET /health` returning `{"status": "ok"}`
-3. `POST /api/assess` returning maintenance recommendations
-4. Local and container startup through `uvicorn`
+1. `POST /api/assess` — RAG-backed assessment via Gemini + pgvector retrieval
+2. `GET /api/shops/nearest` — Google Places API shop search with haversine distance
+3. `PUT/GET/DELETE /api/users/:id` — user CRUD with DIN calculation
+4. `POST /api/auth/login` — email/password authentication
 
-Next backend steps:
+---
 
-1. Replace placeholder assessment logic with RAG-backed recommendations
-2. Add backend modules for database and Gemini integrations
-3. Expand router coverage as the API surface grows
+## Roadmap / Next Steps
+
+### High priority
+
+**1. Update ResultsPage to display the full MVP response**
+
+`ResultsPage.jsx` still renders the old shape (recommendations + tips only). It needs to show all fields the backend now returns:
+- Safety verdict (`safeToSki`, `severity` 1–5, `verdict` DIY/SHOP)
+- Repair steps (`repairSteps`)
+- Parts list (`partsList`) with shopping links to Amazon, REI, evo, Backcountry, Peter Glenn (built from `Part.searchQuery`)
+- YouTube suggestions (`youtubeSuggestions`)
+- Rule-based recommendations (`recommendations`) — keep these, they come from the orchestrator
+
+**2. Expand the RAG knowledge base**
+
+The `data_agent` pipeline has only ingested 12 chunks (4 static docs). To improve assessment quality:
+- Set `YOUTUBE_API_KEY` in the environment and populate `YouTubeSource.VIDEO_IDS` with real ski repair video IDs (evo, Sidecut Tuning, Peter Glenn channels are good sources)
+- Fix or replace the web scraper sources — REI and evo block bots; swap for scraper-friendly alternatives or add proper `User-Agent` headers
+- Re-run `python -m data_agent` against production Cloud SQL after adding sources
+
+**3. Add shopping links for parts**
+
+`Part.searchQuery` is a generic product string (e.g. `"Swix P-tex ski base repair candle"`). The frontend should build links from it:
+```js
+const retailers = [
+  { name: 'REI', url: (q) => `https://www.rei.com/search?q=${encodeURIComponent(q)}` },
+  { name: 'evo', url: (q) => `https://www.evo.com/search?q=${encodeURIComponent(q)}` },
+  { name: 'Amazon', url: (q) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}` },
+];
+```
+
+### Lower priority
+
+**4. End-to-end production test**
+
+Run a full assess request against the live Cloud Run deployment with `GEMINI_API_KEY` set and Cloud SQL populated. Verify the RAG path returns non-empty `repairSteps` and `partsList`.
+
+**5. MyFit / DIN page**
+
+The nav bar previously had a "MyFit" placeholder. If the user profile + DIN feature is meant to be a standalone page, wire it up: add a `MyFitPage.jsx`, register it in `App.jsx`, and add it back to `Header.jsx`.
 
 ---
 

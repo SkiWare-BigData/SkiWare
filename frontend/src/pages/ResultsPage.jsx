@@ -115,8 +115,8 @@ function SeverityIcon({ severity }) {
 function buildEquipmentName(formData) {
   const brand = formData.brand ? `${formData.brand} ` : '';
   const equipment = formData.equipmentType === 'skis' ? 'Skis' : 'Snowboard';
-  const length = formData.length ? ` · ${formData.length}cm` : '';
-  return `${brand}${equipment}${length}`.trim();
+  const length = formData.length ? ` (${formData.length}in)` : '';
+  return `${brand}${equipment}${length}`;
 }
 
 function capitalize(value) {

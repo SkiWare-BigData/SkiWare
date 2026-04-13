@@ -10,13 +10,24 @@ BATCH_SIZE = 100
 MODEL_NAME = "text-embedding-004"
 EMBEDDING_DIM = 768
 
+_model: TextEmbeddingModel | None = None
+
+
+def _get_model() -> TextEmbeddingModel:
+    global _model
+    if _model is None:
+        vertexai.init(
+            project=os.environ["GCP_PROJECT"],
+            location=os.environ.get("GCP_REGION", "us-central1"),
+        )
+        _model = TextEmbeddingModel.from_pretrained(MODEL_NAME)
+    return _model
+
 
 def embed_batch(texts: list[str]) -> list[list[float]]:
-    vertexai.init(
-        project=os.environ["GCP_PROJECT"],
-        location=os.environ.get("GCP_REGION", "us-central1"),
-    )
-    model = TextEmbeddingModel.from_pretrained(MODEL_NAME)
+    if not texts:
+        return []
+    model = _get_model()
     all_embeddings: list[list[float]] = []
 
     for i in range(0, len(texts), BATCH_SIZE):
