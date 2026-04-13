@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 const SKILL_LEVELS = [
   { value: 'beginner', label: 'Beginner' },
@@ -98,9 +98,59 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
   const [loginError, setLoginError] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploadingIdx, setUploadingIdx] = useState(null);
+  const [uploadErrors, setUploadErrors] = useState({});
+  const fileInputRefs = useRef({});
 
   const setField = (field) => (val) => setForm((f) => ({ ...f, [field]: val }));
   const setFieldE = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  const handleImageUpload = async (i, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingIdx(i);
+    setUploadErrors((prev) => ({ ...prev, [i]: null }));
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      const res = await fetch('/api/images/upload', { method: 'POST', body });
+      if (res.ok) {
+        const { url } = await res.json();
+        // Use functional update so we always operate on the latest state,
+        // not the stale closure-captured `form.equipment`.
+        setForm((f) => ({
+          ...f,
+          equipment: f.equipment.map((eq, j) =>
+            j === i ? { ...eq, images: [...(eq.images || []), url] } : eq
+          ),
+        }));
+      } else {
+        const err = await res.json().catch(() => ({}));
+        const msg =
+          res.status === 415
+            ? 'Only JPEG, PNG, WebP, or GIF images are supported.'
+            : res.status === 413
+              ? 'Image must be under 10 MB.'
+              : err.detail || 'Upload failed. Please try again.';
+        setUploadErrors((prev) => ({ ...prev, [i]: msg }));
+      }
+    } catch {
+      setUploadErrors((prev) => ({ ...prev, [i]: 'Connection error. Please try again.' }));
+    } finally {
+      setUploadingIdx(null);
+      // reset so the same file can be picked again
+      if (fileInputRefs.current[i]) fileInputRefs.current[i].value = '';
+    }
+  };
+
+  const removeImage = (i, imgIdx) => {
+    setForm((f) => ({
+      ...f,
+      equipment: f.equipment.map((eq, j) =>
+        j === i ? { ...eq, images: (eq.images || []).filter((_, k) => k !== imgIdx) } : eq
+      ),
+    }));
+  };
 
   const handleSignIn = async () => {
     const email = loginEmail.trim();
@@ -329,13 +379,22 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
                 <ul className="profile-equipment-list">
                   {u.equipment.map((item, i) => (
                     <li key={i} className="profile-equipment-item">
-                      {[
-                        item.name,
-                        item.length && `${item.length}cm`,
-                        item.width && `${item.width}mm`,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
+                      {item.images?.[0] && (
+                        <img
+                          src={item.images[0]}
+                          alt=""
+                          className="profile-equip-thumb"
+                        />
+                      )}
+                      <span>
+                        {[
+                          item.name,
+                          item.length && `${item.length}cm`,
+                          item.width && `${item.width}mm`,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -551,6 +610,7 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
                     );
                     setField('equipment')(updated);
                   };
+                  const images = item.images || [];
                   return (
                     <div key={i} className="equipment-item-card">
                       <div className="equipment-item-fields">
@@ -582,17 +642,60 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
                           />
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        className="btn-ghost"
-                        onClick={() =>
-                          setField('equipment')(
-                            form.equipment.filter((_, j) => j !== i)
-                          )
-                        }
-                      >
-                        Remove
-                      </button>
+
+                      {images.length > 0 && (
+                        <div className="equipment-images">
+                          {images.map((url, imgIdx) => (
+                            <div
+                              key={imgIdx}
+                              className={`equipment-image-thumb${imgIdx === 0 ? ' default' : ''}`}
+                            >
+                              <img src={url} alt={imgIdx === 0 ? 'Default photo' : `Photo ${imgIdx + 1}`} />
+                              {imgIdx === 0 && (
+                                <span className="default-badge">Default</span>
+                              )}
+                              <button
+                                type="button"
+                                className="remove-image-btn"
+                                onClick={() => removeImage(i, imgIdx)}
+                                aria-label="Remove photo"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="equipment-item-footer">
+                        <label className={`add-photo-label${uploadingIdx === i ? ' uploading' : ''}`}>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="visually-hidden"
+                            ref={(el) => { fileInputRefs.current[i] = el; }}
+                            onChange={(e) => handleImageUpload(i, e)}
+                            disabled={uploadingIdx === i}
+                          />
+                          {uploadingIdx === i
+                            ? <><span className="spinner" />Uploading…</>
+                            : '+ Add photo'}
+                        </label>
+                        <button
+                          type="button"
+                          className="btn-ghost"
+                          onClick={() =>
+                            setField('equipment')(
+                              form.equipment.filter((_, j) => j !== i)
+                            )
+                          }
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      {uploadErrors[i] && (
+                        <p className="upload-error">{uploadErrors[i]}</p>
+                      )}
                     </div>
                   );
                 })}
@@ -602,7 +705,7 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
                   onClick={() =>
                     setField('equipment')([
                       ...form.equipment,
-                      { name: '', length: '', width: '' },
+                      { name: '', length: '', width: '', images: [] },
                     ])
                   }
                 >

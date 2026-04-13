@@ -152,6 +152,13 @@ export default function FormPage({ onSubmit, onCancel, currentUser }) {
                       checked={selectedEquipment === item}
                       onChange={() => handleEquipmentSelection(item)}
                     />
+                    {item.images?.[0] && (
+                      <img
+                        src={item.images[0]}
+                        alt=""
+                        className="equip-select-thumb"
+                      />
+                    )}
                     <span>{item.name}</span>
                     <span className="equipment-details">
                       {item.length}cm, {item.width}mm
