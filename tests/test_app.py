@@ -423,7 +423,9 @@ def test_retriever_returns_chunks_above_threshold():
         MagicMock(chunk_text="P-tex candles work for surface scratches", metadata={"upvotes": 45}),
         MagicMock(chunk_text="Clean base before applying any filler", metadata=None),
     ]
-    mock_db.execute.return_value.fetchall.return_value = mock_rows
+    mock_result = MagicMock()
+    mock_result.fetchall.return_value = mock_rows
+    mock_db.execute.return_value = mock_result
 
     with patch("backend.services.retriever.TextEmbeddingModel") as mock_model_cls:
         mock_model = MagicMock()
@@ -446,7 +448,9 @@ def test_retriever_returns_empty_when_no_rows():
     from backend.services.retriever import retrieve_relevant_chunks
 
     mock_db = AsyncMock()
-    mock_db.execute.return_value.fetchall.return_value = []
+    mock_result = MagicMock()
+    mock_result.fetchall.return_value = []
+    mock_db.execute.return_value = mock_result
 
     with patch("backend.services.retriever.TextEmbeddingModel") as mock_model_cls:
         mock_model = MagicMock()

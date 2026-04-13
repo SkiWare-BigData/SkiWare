@@ -5,6 +5,7 @@ from backend.db.connection import init_connection, get_db
 from data_agent.pipeline.chunker import chunk_document
 from data_agent.pipeline.embedder import embed_batch
 from data_agent.pipeline.store import upsert_chunks
+from data_agent.sources.reddit import RedditSource
 from data_agent.sources.static_docs import StaticDocsSource
 from data_agent.sources.web_scraper import WebScraperSource
 from data_agent.sources.youtube import YouTubeSource
@@ -16,6 +17,7 @@ SOURCES = [
     StaticDocsSource(),
     WebScraperSource(),
     YouTubeSource(),
+    RedditSource(),
 ]
 
 

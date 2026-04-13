@@ -38,7 +38,7 @@ async def retrieve_relevant_chunks(db: AsyncSession, query: str) -> list[dict]:
         "top_k": TOP_K,
     })
 
-    rows = await result.fetchall()
+    rows = result.fetchall()
     return [{"chunk_text": row.chunk_text, "metadata": row.metadata} for row in rows]
 
 

@@ -15,11 +15,12 @@ HEADERS = {
     "Referer": "https://www.google.com/",
 }
 
-# Verified accessible URLs (checked with browser headers)
+# Verified accessible URLs (checked with browser headers, HTTP 200)
 URLS = [
-    "https://en.wikipedia.org/wiki/Ski_binding",
-    "https://en.wikipedia.org/wiki/Skiing",
-    "https://en.wikipedia.org/wiki/Snowboarding",
+    "https://en.wikipedia.org/wiki/Ski_binding",       # binding setup and DIN
+    "https://en.wikipedia.org/wiki/Ski_wax",           # wax types, application, temperature guide
+    "https://en.wikipedia.org/wiki/Alpine_skiing",     # ski equipment, technique, maintenance context
+    "https://www.outdoor-ed.com/how-to/how-to-tune-skis/",  # full ski tuning walkthrough
 ]
 
 
