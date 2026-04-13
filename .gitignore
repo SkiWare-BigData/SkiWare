@@ -6,3 +6,5 @@ __pycache__/
 .DS_Store
 .github/copilot-instructions.md
 postgres_data/
+uploads/*
+!uploads/.gitkeep
