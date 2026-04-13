@@ -138,7 +138,7 @@ def test_assess_endpoint_uses_default_equipment_type():
          patch("backend.services.assessment.generate_assessment", new_callable=AsyncMock) as mock_generate:
 
         mock_retrieve.return_value = []
-        mock_generate.return_value = _mock_llm_response()
+        mock_generate.return_value = _mock_llm_response(equipmentType="skis", brand="")
 
         response = client.post("/api/assess", json={})
 
@@ -216,8 +216,8 @@ def test_user_router_supports_crud_flow():
     assert update_response.status_code == 200
     assert update_response.json()["preferredSport"] == "Skier"
     assert update_response.json()["equipment"] == [
-        {"name": "Rossignol Experience 88", "length": "180", "width": "88"},
-        {"name": "K2 Mindbender 108Ti", "length": "184", "width": "108"},
+        {"name": "Rossignol Experience 88", "length": "180", "width": "88", "bindingType": "", "images": []},
+        {"name": "K2 Mindbender 108Ti", "length": "184", "width": "108", "bindingType": "", "images": []},
     ]
     assert update_response.json()["preferredTerrain"] == "backcountry"
     assert update_response.json()["weightLbs"] == 158.7
@@ -496,8 +496,8 @@ def test_generator_returns_assessment_response():
     mock_response = MagicMock()
     mock_response.text = json.dumps(fake_llm_output)
 
-    with patch("backend.services.generator.genai.Client") as mock_client_cls, \
-         patch.dict("os.environ", {"GEMINI_API_KEY": "fake-key"}):
+    with patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"}), \
+         patch("backend.services.generator.genai.Client") as mock_client_cls:
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
         mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
@@ -542,8 +542,8 @@ def test_generator_includes_engagement_metadata_in_prompt():
         captured_contents.append(kwargs.get("contents", ""))
         return mock_response
 
-    with patch("backend.services.generator.genai.Client") as mock_client_cls, \
-         patch.dict("os.environ", {"GEMINI_API_KEY": "fake-key"}):
+    with patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"}), \
+         patch("backend.services.generator.genai.Client") as mock_client_cls:
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
         mock_client.aio.models.generate_content = fake_generate

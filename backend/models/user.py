@@ -12,6 +12,8 @@ class EquipmentItem(BaseModel):
     name: str = ""       # brand + model, e.g. "Rossignol Experience 88"
     length: str = ""     # e.g. "180" (cm) or "180cm"
     width: str = ""      # e.g. "88" (mm waist) or "88mm"
+    bindingType: str = ""  # e.g. "Alpine", "Tech/Pin", "Frame", "Strap"
+    images: list[str] = []  # list of image URLs; index 0 is the default/cover image
 
 
 class UserWrite(BaseModel):

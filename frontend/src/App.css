@@ -1,4 +1,23 @@
 /* =========================================================
+   Spinner
+   ========================================================= */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* =========================================================
    App shell
    ========================================================= */
 
@@ -325,6 +344,37 @@
 .results-page {
   max-width: 760px;
   margin: 0 auto;
+}
+
+.equipment-selection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.equipment-selection-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.equipment-details {
+  margin-left: auto;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.equip-select-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: calc(var(--radius) - 2px);
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
 }
 
 .page-header {
@@ -1425,6 +1475,9 @@ input[type='range']::-moz-range-thumb {
   font-size: 14px;
   color: var(--text-primary);
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .equipment-editor {
@@ -1449,6 +1502,121 @@ input[type='range']::-moz-range-thumb {
   gap: 10px;
 }
 
+.equipment-item-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.equipment-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.equipment-image-thumb {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+}
+
+.equipment-image-thumb.default {
+  border-color: var(--sky-500);
+}
+
+.equipment-image-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.default-badge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--sky-500);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  padding: 2px 0;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.remove-image-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.add-photo-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  border: 1px dashed var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.add-photo-label:hover {
+  background: var(--slate-100);
+  color: var(--text-primary);
+  border-color: var(--sky-400);
+}
+
+.add-photo-label.uploading {
+  opacity: 0.7;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.profile-equip-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: calc(var(--radius) - 2px);
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
 .inline-link {
   color: var(--sky-600);
   font-weight: 700;
@@ -1465,6 +1633,13 @@ input[type='range']::-moz-range-thumb {
   font-weight: 600;
   margin-top: 8px;
   text-align: left;
+}
+
+.upload-error {
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
 }
 
 .form-actions-stack {
