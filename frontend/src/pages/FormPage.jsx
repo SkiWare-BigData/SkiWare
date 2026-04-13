@@ -38,8 +38,44 @@ const INITIAL_FORM = {
   weight: '',
 };
 
-export default function FormPage({ onSubmit, onCancel }) {
+function terrainToSnowCondition(terrain) {
+  switch (terrain) {
+    case 'powder':
+    case 'backcountry':
+      return 'powder';
+    case 'groomers':
+      return 'ice';
+    case 'park':
+    case 'hybrid':
+    default:
+      return 'hybrid';
+  }
+}
+
+function terrainToTerrainType(terrain) {
+  switch (terrain) {
+    case 'groomers':
+    case 'park':
+      return 'groomed';
+    case 'powder':
+    case 'backcountry':
+      return 'ungroomed';
+    case 'hybrid':
+    default:
+      return 'hybrid';
+  }
+}
+
+export default function FormPage({ onSubmit, onCancel, currentUser }) {
   const [formData, setFormData] = useState(INITIAL_FORM);
+  const [selectedEquipment, setSelectedEquipment] = useState(
+    currentUser?.equipment?.[0] || null
+  );
+  const isLoggedIn = !!currentUser;
+
+  const handleEquipmentSelection = (equipment) => {
+    setSelectedEquipment(equipment);
+  };
 
   const handleChange = (event) => {
     const { name, value, type } = event.target;
@@ -60,7 +96,37 @@ export default function FormPage({ onSubmit, onCancel }) {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    onSubmit(formData);
+    if (isLoggedIn) {
+      const userEquipment = selectedEquipment || {};
+      const payload = {
+        equipmentType:
+          currentUser.preferredSport?.toLowerCase() === 'snowboarder'
+            ? 'snowboard'
+            : 'skis',
+        brand: userEquipment.name || '',
+        lengthCm: userEquipment.length || '',
+        age: '1-2 years', // Not in user data
+        snowCondition: terrainToSnowCondition(currentUser.preferredTerrain),
+        terrainType: terrainToTerrainType(currentUser.preferredTerrain),
+        skillLevel: currentUser.skillLevel,
+        heightIn: currentUser.heightIn || '',
+        weightLbs: currentUser.weightLbs || '',
+        daysSinceWax: formData.daysSinceWax,
+        daysSinceEdgeWork: formData.daysSinceEdgeWork,
+        coreShots: formData.coreShots,
+      };
+      onSubmit(payload);
+    } else {
+      const payload = {
+        ...formData,
+        lengthCm: formData.length,
+        snowCondition: formData.terrain,
+        terrainType: formData.style,
+        heightIn: formData.height,
+        weightLbs: formData.weight,
+      };
+      onSubmit(payload);
+    }
   };
 
   return (
@@ -72,124 +138,150 @@ export default function FormPage({ onSubmit, onCancel }) {
         </div>
 
         <form onSubmit={handleSubmit} className="assessment-form">
-          <div className="form-section">
-            <div className="section-title">Equipment</div>
-            <div className="section-subtitle">What are you riding?</div>
-            <div className="segmented-grid grid-2">
-              {equipmentTypeOptions.map((option) => (
-                <TileOption
-                  key={option.value}
-                  name="equipmentType"
-                  value={option.value}
-                  checked={formData.equipmentType === option.value}
-                  onSelect={handleTileSelect}
-                  label={option.label}
-                />
-              ))}
-            </div>
-
-            <div className="input-grid" style={{ marginTop: '18px' }}>
-              <div className="form-group">
-                <label htmlFor="brand">Brand</label>
-                <input
-                  type="text"
-                  id="brand"
-                  name="brand"
-                  value={formData.brand}
-                  onChange={handleChange}
-                  placeholder="e.g. Rossignol"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="length">Length (in)</label>
-                <input
-                  type="number"
-                  id="length"
-                  name="length"
-                  value={formData.length}
-                  onChange={handleChange}
-                  placeholder="e.g. 67"
-                />
-              </div>
-            </div>
-
-            <div className="form-group" style={{ marginTop: '14px' }}>
-              <label htmlFor="age">Equipment age</label>
-              <select id="age" name="age" value={formData.age} onChange={handleChange}>
-                {equipmentAgeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="form-section">
-            <div className="section-title">Conditions</div>
-            <div className="section-subtitle">Where do you usually ride?</div>
-
-            <div className="choice-group">
-              <div className="choice-group-title">Snow type</div>
-              <div className="segmented-grid grid-3">
-                {terrainOptions.map((option) => (
-                  <TileOption
-                    key={option.value}
-                    name="terrain"
-                    value={option.value}
-                    checked={formData.terrain === option.value}
-                    onSelect={handleTileSelect}
-                    label={option.label}
-                  />
+          {isLoggedIn ? (
+            <div className="form-section">
+              <div className="section-title">Equipment</div>
+              <div className="section-subtitle">What are you riding?</div>
+              <div className="equipment-selection-list">
+                {currentUser.equipment.map((item, index) => (
+                  <label key={index} className="equipment-selection-item">
+                    <input
+                      type="radio"
+                      name="selectedEquipment"
+                      value={item}
+                      checked={selectedEquipment === item}
+                      onChange={() => handleEquipmentSelection(item)}
+                    />
+                    <span>{item.name}</span>
+                    <span className="equipment-details">
+                      {item.length}cm, {item.width}mm
+                    </span>
+                  </label>
                 ))}
               </div>
             </div>
+          ) : (
+            <>
+              <div className="form-section">
+                <div className="section-title">Equipment</div>
+                <div className="section-subtitle">What are you riding?</div>
+                <div className="segmented-grid grid-2">
+                  {equipmentTypeOptions.map((option) => (
+                    <TileOption
+                      key={option.value}
+                      name="equipmentType"
+                      value={option.value}
+                      checked={formData.equipmentType === option.value}
+                      onSelect={handleTileSelect}
+                      label={option.label}
+                    />
+                  ))}
+                </div>
 
-            <div className="choice-group">
-              <div className="choice-group-title">Terrain</div>
-              <div className="segmented-grid grid-3">
-                {styleOptions.map((option) => (
-                  <TileOption
-                    key={option.value}
-                    name="style"
-                    value={option.value}
-                    checked={formData.style === option.value}
-                    onSelect={handleTileSelect}
-                    label={option.label}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
+                <div className="input-grid" style={{ marginTop: '18px' }}>
+                  <div className="form-group">
+                    <label htmlFor="brand">Brand</label>
+                    <input
+                      type="text"
+                      id="brand"
+                      name="brand"
+                      value={formData.brand}
+                      onChange={handleChange}
+                      placeholder="e.g. Rossignol"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="length">Length (cm)</label>
+                    <input
+                      type="number"
+                      id="length"
+                      name="length"
+                      value={formData.length}
+                      onChange={handleChange}
+                      placeholder="e.g. 170"
+                    />
+                  </div>
+                </div>
 
-          <div className="form-section">
-            <div className="section-title">Rider</div>
-            <div className="section-subtitle">Used to tune the recommendations.</div>
-            <div className="input-grid">
-              <div className="form-group">
-                <label htmlFor="height">Height (in)</label>
-                <input
-                  type="number"
-                  id="height"
-                  name="height"
-                  value={formData.height}
-                  onChange={handleChange}
-                  placeholder="e.g. 69"
-                />
+                <div className="form-group" style={{ marginTop: '14px' }}>
+                  <label htmlFor="age">Equipment age</label>
+                  <select id="age" name="age" value={formData.age} onChange={handleChange}>
+                    {equipmentAgeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div className="form-group">
-                <label htmlFor="weight">Weight (lbs)</label>
-                <input
-                  type="number"
-                  id="weight"
-                  name="weight"
-                  value={formData.weight}
-                  onChange={handleChange}
-                  placeholder="e.g. 155"
-                />
+
+              <div className="form-section">
+                <div className="section-title">Conditions</div>
+                <div className="section-subtitle">Where do you usually ride?</div>
+
+                <div className="choice-group">
+                  <div className="choice-group-title">Snow type</div>
+                  <div className="segmented-grid grid-3">
+                    {terrainOptions.map((option) => (
+                      <TileOption
+                        key={option.value}
+                        name="terrain"
+                        value={option.value}
+                        checked={formData.terrain === option.value}
+                        onSelect={handleTileSelect}
+                        label={option.label}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="choice-group">
+                  <div className="choice-group-title">Terrain</div>
+                  <div className="segmented-grid grid-3">
+                    {styleOptions.map((option) => (
+                      <TileOption
+                        key={option.value}
+                        name="style"
+                        value={option.value}
+                        checked={formData.style === option.value}
+                        onSelect={handleTileSelect}
+                        label={option.label}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+
+              <div className="form-section">
+                <div className="section-title">Rider</div>
+                <div className="section-subtitle">Used to tune the recommendations.</div>
+                <div className="input-grid">
+                  <div className="form-group">
+                    <label htmlFor="height">Height (in)</label>
+                    <input
+                      type="number"
+                      id="height"
+                      name="height"
+                      value={formData.height}
+                      onChange={handleChange}
+                      placeholder="e.g. 69"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="weight">Weight (lbs)</label>
+                    <input
+                      type="number"
+                      id="weight"
+                      name="weight"
+                      value={formData.weight}
+                      onChange={handleChange}
+                      placeholder="e.g. 155"
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="form-section">
             <div className="section-title">Maintenance history</div>

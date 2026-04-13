@@ -327,6 +327,28 @@
   margin: 0 auto;
 }
 
+.equipment-selection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.equipment-selection-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.equipment-details {
+  margin-left: auto;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
 .page-header {
   margin-bottom: 28px;
 }
