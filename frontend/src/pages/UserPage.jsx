@@ -333,6 +333,7 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
                         item.name,
                         item.length && `${item.length}cm`,
                         item.width && `${item.width}mm`,
+                        item.bindingType,
                       ]
                         .filter(Boolean)
                         .join(' · ')}
@@ -581,6 +582,15 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
                             placeholder="88"
                           />
                         </div>
+                        <div className="form-group">
+                          <label>Binding type</label>
+                          <input
+                            type="text"
+                            value={item.bindingType ?? ''}
+                            onChange={updateItem('bindingType')}
+                            placeholder="Alpine, Tech/Pin, Strap…"
+                          />
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -602,7 +612,7 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
                   onClick={() =>
                     setField('equipment')([
                       ...form.equipment,
-                      { name: '', length: '', width: '' },
+                      { name: '', length: '', width: '', bindingType: '' },
                     ])
                   }
                 >

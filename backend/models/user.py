@@ -9,9 +9,10 @@ SnowSport = Literal["Skier", "Snowboarder"]
 
 
 class EquipmentItem(BaseModel):
-    name: str = ""       # brand + model, e.g. "Rossignol Experience 88"
-    length: str = ""     # e.g. "180" (cm) or "180cm"
-    width: str = ""      # e.g. "88" (mm waist) or "88mm"
+    name: str = ""         # brand + model, e.g. "Rossignol Experience 88"
+    length: str = ""       # e.g. "180" (cm) or "180cm"
+    width: str = ""        # e.g. "88" (mm waist) or "88mm"
+    bindingType: str = ""  # e.g. "Alpine", "Tech/Pin", "Frame", "Strap"
 
 
 class UserWrite(BaseModel):
