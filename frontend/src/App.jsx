@@ -76,7 +76,11 @@ function App() {
         />
       )}
       {currentPage === 'form' && (
-        <FormPage onSubmit={handleFormSubmit} onCancel={handleBackToHome} />
+        <FormPage
+          onSubmit={handleFormSubmit}
+          onCancel={handleBackToHome}
+          currentUser={currentUser}
+        />
       )}
       {currentPage === 'results' && (
         <ResultsPage
