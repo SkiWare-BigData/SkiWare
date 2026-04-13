@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.routers.assessments import router as assessments_router
 from backend.routers.auth import router as auth_router
+from backend.routers.images import router as images_router
 from backend.routers.shops import router as shops_router
 from backend.routers.users import router as users_router
 
@@ -15,8 +16,14 @@ app = FastAPI(title="SkiWare")
 
 app.include_router(assessments_router)
 app.include_router(auth_router)
+app.include_router(images_router)
 app.include_router(shops_router)
 app.include_router(users_router)
+
+# Serve uploaded equipment images
+_UPLOADS = Path(__file__).parent.parent / "uploads"
+_UPLOADS.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=_UPLOADS), name="uploads")
 
 # Serve compiled React frontend (present in production image, absent in local dev)
 _DIST = Path(__file__).parent.parent / "frontend" / "dist"

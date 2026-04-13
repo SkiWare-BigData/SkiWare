@@ -11,3 +11,4 @@ google-genai==1.72.0
 google-cloud-aiplatform==1.147.0
 beautifulsoup4==4.12.3
 requests==2.32.3
+python-multipart==0.0.20
