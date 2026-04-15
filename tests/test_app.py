@@ -3,6 +3,14 @@ from datetime import date
 from fastapi.testclient import TestClient
 
 from backend.main import app
+
+
+def _authed_client(app, *, email: str, password: str) -> TestClient:
+    """Return a TestClient that already has an auth cookie for the given user."""
+    c = TestClient(app, raise_server_exceptions=True)
+    resp = c.post("/api/auth/login", json={"email": email, "password": password})
+    assert resp.status_code == 200, f"Login failed: {resp.json()}"
+    return c
 from backend.models.assesment import AssessmentResponse, Part
 from backend.services.calculate_DIN import calculate_din
 
@@ -148,6 +156,8 @@ def test_assess_endpoint_uses_default_equipment_type():
 
 def test_user_router_supports_crud_flow():
     birthday = date(1998, 2, 14)
+
+    # 1. Create account — no auth required for new users
     create_response = client.put(
         "/api/users/ava-sender",
         json={
@@ -194,7 +204,10 @@ def test_user_router_supports_crud_flow():
     assert detail_response.status_code == 200
     assert detail_response.json()["name"] == "Ava Sender"
 
-    update_response = client.put(
+    # 2. Log in to get an auth cookie, then use that client for write operations
+    authed = _authed_client(app, email="ava@example.com", password="TestPass123!")
+
+    update_response = authed.put(
         f"/api/users/{user_id}",
         json={
             "name": "Ava Sender",
@@ -238,7 +251,7 @@ def test_user_router_supports_crud_flow():
         skier_type=3,
     )
 
-    delete_response = client.delete(f"/api/users/{user_id}")
+    delete_response = authed.delete(f"/api/users/{user_id}")
     assert delete_response.status_code == 204
 
     missing_response = client.get(f"/api/users/{user_id}")
@@ -307,11 +320,11 @@ def test_get_missing_user_returns_404():
     assert response.json() == {"detail": "User not found"}
 
 
-def test_delete_missing_user_returns_404():
+def test_delete_requires_authentication():
+    # Unauthenticated delete must return 401 now that the route is protected
     response = client.delete("/api/users/missing-user")
 
-    assert response.status_code == 404
-    assert response.json() == {"detail": "User not found"}
+    assert response.status_code == 401
 
 
 def test_user_router_rejects_din_inputs_outside_supported_chart():
