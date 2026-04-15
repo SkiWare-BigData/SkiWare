@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime
+from datetime import date, datetime, timezone
 from typing import Any
 
 import bcrypt
@@ -43,7 +43,7 @@ async def upsert_user(
     db: AsyncSession, user_id: str, payload: UserWrite, din: float
 ) -> tuple[UserResponse, bool]:
     existing = await db.get(UserTable, user_id)
-    timestamp = datetime.now(UTC)
+    timestamp = datetime.now(timezone.utc)
     created_at = existing.created_at if existing else timestamp
 
     if existing is None:

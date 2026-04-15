@@ -8,3 +8,4 @@ __pycache__/
 postgres_data/
 uploads/*
 !uploads/.gitkeep
+dev.db

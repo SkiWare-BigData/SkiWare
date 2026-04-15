@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './App.css';
 import Header from './components/Header';
 import HomePage from './pages/HomePage';
@@ -21,8 +21,21 @@ function App() {
     setCurrentPage(page);
   };
 
+  // Restore session on page load by reading the HTTP-only cookie via /api/auth/me
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((user) => { if (user) setCurrentUser(user); })
+      .catch(() => {});
+  }, []);
+
   const handleLogin = (user) => setCurrentUser(user);
-  const handleLogout = () => setCurrentUser(null);
+
+  const handleLogout = async () => {
+    try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
+    setCurrentUser(null);
+    setCurrentPage('home');
+  };
 
   const handleStartAssessment = () => setCurrentPage('form');
   const handleFindShop = () => setCurrentPage('findShop');
