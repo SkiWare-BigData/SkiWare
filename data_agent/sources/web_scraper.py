@@ -15,12 +15,30 @@ HEADERS = {
     "Referer": "https://www.google.com/",
 }
 
-# Verified accessible URLs (checked with browser headers, HTTP 200)
 URLS = [
-    "https://en.wikipedia.org/wiki/Ski_binding",       # binding setup and DIN
-    "https://en.wikipedia.org/wiki/Ski_wax",           # wax types, application, temperature guide
-    "https://en.wikipedia.org/wiki/Alpine_skiing",     # ski equipment, technique, maintenance context
-    "https://www.outdoor-ed.com/how-to/how-to-tune-skis/",  # full ski tuning walkthrough
+    # Wikipedia — generic but reliable, good structural context
+    "https://en.wikipedia.org/wiki/Ski_binding",
+    "https://en.wikipedia.org/wiki/Ski_wax",
+    "https://en.wikipedia.org/wiki/Alpine_skiing",
+
+    # outdoor-ed.com — full ski tuning walkthrough
+    "https://www.outdoor-ed.com/how-to/how-to-tune-skis/",
+
+    # Tognar — specialty tuning supplier, comprehensive maintenance guide
+    # covers base flattening, structuring, edge tuning, waxing, maintenance schedule
+    "https://www.tognar.com/basic-ski-tuning-and-waxing-maintenance-guide/",
+
+    # Renoun — ski brand how-to covering edge angles, base prep, wax selection,
+    # detuning tips/tails, park vs all-mountain guidance
+    "https://renoun.com/blogs/blog/tune-wax-skis-guide",
+
+    # Racewax — race-oriented guide covering base/side edge bevel angles,
+    # diamond stone sharpening, iron waxing technique
+    "https://racewax.com/pages/quick-tuning-guide",
+
+    # Powder7 — shop blog covering wax frequency, tuning intervals, damage
+    # assessment (core shots vs. surface scratches), storage waxing
+    "https://www.powder7.com/ski-blog/ski-maintenance/",
 ]
 
 
