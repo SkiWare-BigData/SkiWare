@@ -40,3 +40,28 @@ class AssessmentResponse(BaseModel):
     daysSinceEdgeWork: int
     recommendations: list[Recommendation]
     tips: list[str]
+
+
+class ShopResult(BaseModel):
+    name: str
+    address: str
+    phone: str | None = None
+    rating: float | None = None
+    open_now: bool | None = None
+    google_maps_url: str
+    distance_miles: float
+    lat: float
+    lng: float
+
+
+class ShopsResponse(BaseModel):
+    origin_lat: float
+    origin_lng: float
+    radius_miles: int
+    shops: list[ShopResult]
+
+
+class GeocodeResponse(BaseModel):
+    lat: float
+    lng: float
+    formatted_address: str

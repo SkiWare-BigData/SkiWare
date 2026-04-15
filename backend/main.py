@@ -4,12 +4,14 @@ from fastapi import FastAPI
 
 from backend.routers.assessments import router as assessments_router
 from backend.routers.pages import router as pages_router
+from backend.routers.shops import router as shops_router
 
 
 app = FastAPI(title="SkiWare")
 
 app.include_router(pages_router)
 app.include_router(assessments_router)
+app.include_router(shops_router)
 
 
 if __name__ == "__main__":
