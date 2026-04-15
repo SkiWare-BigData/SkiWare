@@ -364,7 +364,12 @@ class RedditSource(Source):
                         try:
                             post.comments.replace_more(limit=0)
                             count = 0
-                            for comment in post.comments.list():
+                            top_comments = sorted(
+                                post.comments.list(),
+                                key=lambda c: getattr(c, "score", 0),
+                                reverse=True,
+                            )
+                            for comment in top_comments:
                                 if count >= limit:
                                     break
                                 if comment.id in seen_comment_ids:

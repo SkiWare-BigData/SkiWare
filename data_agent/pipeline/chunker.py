@@ -49,19 +49,23 @@ def _recursive_split(text: str, separators: list[str], chunk_size: int) -> list[
     return result
 
 
-def _add_overlap(chunks: list[str], overlap: int) -> list[str]:
+def _add_overlap(chunks: list[str], overlap: int, chunk_size: int) -> list[str]:
     if len(chunks) <= 1:
         return chunks
     result = [chunks[0]]
     for i in range(1, len(chunks)):
         tail = result[-1][-overlap:] if len(result[-1]) > overlap else result[-1]
-        result.append(tail + chunks[i])
+        combined = tail + chunks[i]
+        # Trim from the front if overlap pushes us over the size limit
+        if len(combined) > chunk_size:
+            combined = combined[-chunk_size:]
+        result.append(combined)
     return result
 
 
 def chunk_document(doc: Document) -> list[dict]:
     raw = _recursive_split(doc.content, SEPARATORS, CHUNK_SIZE)
-    overlapped = _add_overlap(raw, CHUNK_OVERLAP)
+    overlapped = _add_overlap(raw, CHUNK_OVERLAP, CHUNK_SIZE)
     now = datetime.now(timezone.utc).isoformat()
     chunks = []
     for i, text in enumerate(overlapped):
