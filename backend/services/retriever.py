@@ -16,11 +16,14 @@ async def retrieve_relevant_chunks(db: AsyncSession, query: str) -> list[dict]:
     """
     Embeds query via Vertex AI text-embedding-004, queries pgvector with cosine
     similarity, returns chunks where similarity >= SIMILARITY_THRESHOLD.
-    Returns [] if nothing clears the threshold.
+    Returns [] if nothing clears the threshold or if embedding/DB fails.
 
     Each returned dict: {"chunk_text": str, "metadata": dict | None}
     """
-    embedding = await asyncio.to_thread(_embed_query, query)
+    try:
+        embedding = await asyncio.to_thread(_embed_query, query)
+    except Exception:
+        return []
     embedding_str = "[" + ",".join(str(v) for v in embedding) + "]"
 
     sql = text("""
@@ -32,13 +35,16 @@ async def retrieve_relevant_chunks(db: AsyncSession, query: str) -> list[dict]:
         LIMIT :top_k
     """)
 
-    result = await db.execute(sql, {
-        "query_vec": embedding_str,
-        "threshold": SIMILARITY_THRESHOLD,
-        "top_k": TOP_K,
-    })
+    try:
+        result = await db.execute(sql, {
+            "query_vec": embedding_str,
+            "threshold": SIMILARITY_THRESHOLD,
+            "top_k": TOP_K,
+        })
+        rows = result.fetchall()
+    except Exception:
+        return []
 
-    rows = result.fetchall()
     return [{"chunk_text": row.chunk_text, "metadata": row.metadata} for row in rows]
 
 

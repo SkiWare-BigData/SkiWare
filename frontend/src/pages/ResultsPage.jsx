@@ -6,7 +6,7 @@ const RETAILERS = [
   { name: 'Peter Glenn', url: (q) => `https://www.peterglenn.com/search?q=${encodeURIComponent(q)}` },
 ];
 
-export default function ResultsPage({ formData, results, onBackToHome, onNewAssessment }) {
+export default function ResultsPage({ formData, results, error, onBackToHome, onNewAssessment }) {
   if (!formData) {
     return <main className="main-container">Loading…</main>;
   }
@@ -30,7 +30,11 @@ export default function ResultsPage({ formData, results, onBackToHome, onNewAsse
           </div>
         </div>
 
-        {!results ? (
+        {error ? (
+          <div className="loading-state">
+            <p>Something went wrong — please try again.</p>
+          </div>
+        ) : !results ? (
           <div className="loading-state">
             <div className="loading-spinner" aria-hidden="true" />
             <p>Analyzing your gear…</p>

@@ -12,6 +12,7 @@ function App() {
   const [formData, setFormData] = useState(null);
   const [results, setResults] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [assessmentError, setAssessmentError] = useState(false);
 
   const handleNavigate = (page) => {
     if (page === 'home') {
@@ -30,6 +31,7 @@ function App() {
   const handleFormSubmit = async (data) => {
     setFormData(data);
     setResults(null);
+    setAssessmentError(false);
     setCurrentPage('results');
 
     try {
@@ -42,11 +44,11 @@ function App() {
       if (response.ok) {
         setResults(await response.json());
       } else {
-        setResults(null);
+        setAssessmentError(true);
       }
     } catch (error) {
       console.error('Assessment request failed', error);
-      setResults(null);
+      setAssessmentError(true);
     }
   };
 
@@ -54,11 +56,13 @@ function App() {
     setCurrentPage('home');
     setFormData(null);
     setResults(null);
+    setAssessmentError(false);
   };
 
   const handleNewAssessment = () => {
     setCurrentPage('form');
     setResults(null);
+    setAssessmentError(false);
   };
 
   return (
@@ -86,6 +90,7 @@ function App() {
         <ResultsPage
           formData={formData}
           results={results}
+          error={assessmentError}
           onBackToHome={handleBackToHome}
           onNewAssessment={handleNewAssessment}
         />
