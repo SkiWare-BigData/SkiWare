@@ -82,7 +82,9 @@ Repair knowledge:
             ),
         )
     except Exception as exc:
+        import logging
         from fastapi import HTTPException
+        logging.error("Gemini generate_content failed: %s", exc)
         raise HTTPException(status_code=503, detail=f"Gemini service unavailable: {exc}") from exc
 
     data = json.loads(response.text)
