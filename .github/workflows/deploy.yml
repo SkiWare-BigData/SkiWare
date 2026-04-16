@@ -3,6 +3,17 @@ name: Build & Deploy to Cloud Run
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Which service to deploy'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - web
+          - data-agent
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -13,6 +24,7 @@ env:
 
 jobs:
   deploy:
+    if: github.event_name == 'push' || inputs.target == 'web' || inputs.target == 'both'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -66,6 +78,7 @@ jobs:
             --quiet
 
   deploy-data-agent:
+    if: github.event_name == 'push' || inputs.target == 'data-agent' || inputs.target == 'both'
     runs-on: ubuntu-latest
     permissions:
       contents: read

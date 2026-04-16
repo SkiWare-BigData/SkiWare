@@ -24,6 +24,7 @@ services:
       - PORT=8080
       - DATABASE_URL=postgresql+asyncpg://skiware:skiware@db:5432/skiware
       - GOOGLE_PLACES_API_KEY=${GOOGLE_PLACES_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     volumes:
       - ./backend:/app/backend
       - ./alembic:/app/alembic
