@@ -59,7 +59,15 @@ async def generate_assessment(
     Returns a populated AssessmentResponse. recommendations field is empty —
     the orchestrator sets it after this call.
     """
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    gcp_project = os.environ.get("GCP_PROJECT")
+    if gcp_project:
+        client = genai.Client(
+            vertexai=True,
+            project=gcp_project,
+            location=os.environ.get("GCP_REGION", "us-central1"),
+        )
+    else:
+        client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
     contents = f"""Equipment: {request.equipmentType} — {request.brand}
 Terrain: {request.terrain}
@@ -73,7 +81,7 @@ Repair knowledge:
 
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-pro",
             contents=contents,
             config=genai_types.GenerateContentConfig(
                 system_instruction=_SYSTEM_INSTRUCTION,
