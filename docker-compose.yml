@@ -25,11 +25,15 @@ services:
       - DATABASE_URL=postgresql+asyncpg://skiware:skiware@db:5432/skiware
       - GOOGLE_PLACES_API_KEY=${GOOGLE_PLACES_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GCP_PROJECT=${GCP_PROJECT}
+      - GCP_REGION=${GCP_REGION:-us-central1}
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
     volumes:
       - ./backend:/app/backend
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
       - ./uploads:/app/uploads
+      - ~/.config/gcloud:/root/.config/gcloud:ro
     depends_on:
       db:
         condition: service_healthy

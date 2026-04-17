@@ -321,6 +321,16 @@ export default function FindShopPage({ onBackToHome }) {
                           <span className="shop-card-name">{shop.name}</span>
                           <span className="shop-distance">{shop.distance_miles} mi</span>
                         </div>
+                        {shop.rating != null && (
+                          <div className="shop-rating">
+                            ★ {shop.rating.toFixed(1)}
+                            {shop.user_rating_count != null && (
+                              <span className="shop-rating-count">
+                                ({shop.user_rating_count.toLocaleString()})
+                              </span>
+                            )}
+                          </div>
+                        )}
                         {shop.address && <p className="shop-detail">{shop.address}</p>}
                         <div className="shop-links">
                           {shop.phone && (

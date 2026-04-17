@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 const RETAILERS = [
   { name: 'Amazon', url: (q) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}` },
   { name: 'REI', url: (q) => `https://www.rei.com/search?q=${encodeURIComponent(q)}` },
@@ -145,6 +147,8 @@ export default function ResultsPage({ formData, results, error, onBackToHome, on
           </>
         )}
 
+        {results && <NearbyShops />}
+
         <div className="results-buttons">
           <button className="btn-secondary" onClick={onBackToHome}>
             Back to home
@@ -155,6 +159,107 @@ export default function ResultsPage({ formData, results, error, onBackToHome, on
         </div>
       </section>
     </main>
+  );
+}
+
+function NearbyShops() {
+  const [status, setStatus] = useState('locating');
+  const [shops, setShops] = useState([]);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    async function load() {
+      if (!navigator.geolocation) {
+        setStatus('unsupported');
+        return;
+      }
+
+      setStatus('locating');
+      let latitude, longitude;
+
+      try {
+        const getPosition = (opts) =>
+          new Promise((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(resolve, reject, opts)
+          );
+        try {
+          const pos = await getPosition({ enableHighAccuracy: false, timeout: 1500, maximumAge: Infinity });
+          latitude = pos.coords.latitude;
+          longitude = pos.coords.longitude;
+        } catch {
+          const pos = await getPosition({ enableHighAccuracy: false, timeout: 15000, maximumAge: 0 });
+          latitude = pos.coords.latitude;
+          longitude = pos.coords.longitude;
+        }
+      } catch (err) {
+        if (err.code === 1) { setStatus('denied'); return; }
+        setErrorMsg('Could not determine your location.');
+        setStatus('error');
+        return;
+      }
+
+      setStatus('loading');
+      try {
+        const res = await fetch(`/api/shops/nearest?lat=${latitude}&lon=${longitude}&ranked=true`);
+        if (!res.ok) throw new Error('Server error');
+        const data = await res.json();
+        setShops(data);
+        setStatus('success');
+      } catch {
+        setErrorMsg('Could not load nearby shops.');
+        setStatus('error');
+      }
+    }
+
+    load();
+  }, []);
+
+  if (status === 'unsupported' || status === 'denied') return null;
+
+  return (
+    <div className="nearby-shops-section">
+      <h2>Nearby shops</h2>
+      {(status === 'locating' || status === 'loading') && (
+        <p className="shop-status-msg">
+          {status === 'locating' ? 'Detecting your location…' : 'Searching for nearby shops…'}
+        </p>
+      )}
+      {status === 'error' && <p className="shop-error-msg">{errorMsg}</p>}
+      {status === 'success' && shops.length === 0 && (
+        <p className="shop-status-msg">No shops found within 15 miles.</p>
+      )}
+      {status === 'success' && shops.length > 0 && (
+        <ul className="shop-list">
+          {shops.map((shop, i) => (
+            <li key={i} className="shop-card">
+              <div className="shop-card-header">
+                <span className="shop-card-name">{shop.name}</span>
+                <span className="shop-distance">{shop.distance_miles} mi</span>
+              </div>
+              {shop.rating != null && (
+                <div className="shop-rating">
+                  ★ {shop.rating.toFixed(1)}
+                  {shop.user_rating_count != null && (
+                    <span className="shop-rating-count">
+                      ({shop.user_rating_count.toLocaleString()})
+                    </span>
+                  )}
+                </div>
+              )}
+              {shop.address && <p className="shop-detail">{shop.address}</p>}
+              <div className="shop-links">
+                {shop.phone && (
+                  <a className="shop-link" href={`tel:${shop.phone}`}>{shop.phone}</a>
+                )}
+                {shop.website && (
+                  <a className="shop-link" href={shop.website} target="_blank" rel="noreferrer">Website</a>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

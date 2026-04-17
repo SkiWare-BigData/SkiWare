@@ -20,7 +20,36 @@ def _haversine_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> floa
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-async def find_nearest_shops(lat: float, lon: float) -> list[dict]:
+def _top_shops(shops: list[dict], n: int = 5) -> list[dict]:
+    """Return the top-n shops ranked by a combined rating + proximity score.
+
+    Rating is adjusted via a Bayesian average before normalization, so shops
+    with very few reviews are pulled toward the global prior (3.5 stars) and
+    can't inflate their score with a handful of outlier reviews.
+
+    Score = 0.5 * norm_bayesian_rating + 0.5 * norm_proximity  (both in [0, 1])
+    Shops with no rating fall back to the prior rating.
+    """
+    if not shops:
+        return shops
+
+    PRIOR_RATING = 3.5   # assumed global average for ski/board shops
+    PRIOR_COUNT = 25     # weight of the prior in review-count units
+
+    max_dist = max(s["distance_miles"] for s in shops) or 1.0
+
+    def score(shop: dict) -> float:
+        rating = shop["rating"] if shop["rating"] is not None else PRIOR_RATING
+        count = shop["user_rating_count"] or 0
+        bayesian_rating = (rating * count + PRIOR_RATING * PRIOR_COUNT) / (count + PRIOR_COUNT)
+        norm_rating = (bayesian_rating - 1.0) / 4.0                    # 1–5 → 0–1
+        norm_proximity = 1.0 - (shop["distance_miles"] / max_dist)     # closer → higher
+        return 0.5 * norm_rating + 0.5 * norm_proximity
+
+    return sorted(shops, key=score, reverse=True)[:n]
+
+
+async def find_nearest_shops(lat: float, lon: float, ranked: bool = False) -> list[dict]:
     api_key = os.getenv("GOOGLE_PLACES_API_KEY")
     if not api_key:
         print("[shops] ERROR: GOOGLE_PLACES_API_KEY environment variable not set")
@@ -48,7 +77,9 @@ async def find_nearest_shops(lat: float, lon: float) -> list[dict]:
             "places.formattedAddress,"
             "places.nationalPhoneNumber,"
             "places.websiteUri,"
-            "places.location"
+            "places.location,"
+            "places.rating,"
+            "places.userRatingCount"
         ),
     }
 
@@ -98,9 +129,11 @@ async def find_nearest_shops(lat: float, lon: float) -> list[dict]:
             "address": place.get("formattedAddress"),
             "phone": place.get("nationalPhoneNumber"),
             "website": place.get("websiteUri"),
+            "rating": place.get("rating"),
+            "user_rating_count": place.get("userRatingCount"),
         })
 
-    shops.sort(key=lambda s: s["distance_miles"])
+    shops = _top_shops(shops) if ranked else sorted(shops, key=lambda s: s["distance_miles"])
     print(
         f"[shops:{request_id}] Returning {len(shops)} shops "
         f"after {round((time.perf_counter() - request_started_at) * 1000)} ms"

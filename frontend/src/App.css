@@ -996,7 +996,8 @@ input[type='range']::-moz-range-thumb {
 
 .repair-section,
 .parts-section,
-.youtube-section {
+.youtube-section,
+.nearby-shops-section {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -1009,7 +1010,8 @@ input[type='range']::-moz-range-thumb {
 
 .repair-section h2,
 .parts-section h2,
-.youtube-section h2 {
+.youtube-section h2,
+.nearby-shops-section h2 {
   font-size: 18px;
   margin: 0;
 }
@@ -1286,6 +1288,20 @@ input[type='range']::-moz-range-thumb {
   font-size: 15px;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.shop-rating {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f59e0b;
+  margin-bottom: 6px;
+}
+
+.shop-rating-count {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 4px;
 }
 
 .shop-distance {
