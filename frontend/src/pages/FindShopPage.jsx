@@ -83,7 +83,7 @@ function MapController({ selectedShop }) {
 }
 
 export default function FindShopPage({ onBackToHome }) {
-  const [status, setStatus] = useState('idle');
+  const [status, setStatus] = useState('locating');
   const [shops, setShops] = useState([]);
   const [userCoords, setUserCoords] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
@@ -161,10 +161,12 @@ export default function FindShopPage({ onBackToHome }) {
         message: err.message,
         geolocationDurationMs: Math.round(performance.now() - searchStartedAt),
       });
+      if (err.code === 1) {
+        setStatus('denied');
+        return;
+      }
       setErrorMsg(
-        err.code === 1
-          ? 'Location access was denied. Please allow location access and try again.'
-          : err.code === 3
+        err.code === 3
           ? 'Location lookup timed out. Please try again.'
           : 'Could not determine your location. Please try again.'
       );
@@ -206,6 +208,30 @@ export default function FindShopPage({ onBackToHome }) {
     }
   };
 
+  useEffect(() => {
+    handleFindShops();
+
+    if (!navigator.permissions) return;
+
+    let cleanup = null;
+    let cancelled = false;
+    navigator.permissions.query({ name: 'geolocation' }).then((permStatus) => {
+      if (cancelled) return;
+      const onChange = () => {
+        if (permStatus.state === 'granted') {
+          handleFindShops();
+        }
+      };
+      permStatus.addEventListener('change', onChange);
+      cleanup = () => permStatus.removeEventListener('change', onChange);
+    });
+
+    return () => {
+      cancelled = true;
+      if (cleanup) cleanup();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const mapBounds =
     userCoords && shops.length > 0
       ? [userCoords, ...shops.map((s) => [s.lat, s.lon])]
@@ -218,26 +244,50 @@ export default function FindShopPage({ onBackToHome }) {
   return (
     <main className="main-container">
       <section className="shop-page">
-        {status !== 'success' ? (
+        {status === 'denied' ? (
+          <div className="shop-intro">
+            <div className="shop-location-prompt">
+              <div className="shop-location-icon">📍</div>
+              <h1>Location access required</h1>
+              <p>
+                To find ski and snowboard shops near you, please enable location
+                access in your browser settings, then come back to this page.
+              </p>
+              <div className="shop-actions">
+                <button className="btn-primary" onClick={handleFindShops}>
+                  Try again
+                </button>
+                <button className="btn-secondary" onClick={onBackToHome}>
+                  Back to home
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : status !== 'success' ? (
           <div className="shop-intro">
             <h1>Find a nearby shop</h1>
             <p>
               Locate ski and snowboard shops near you for tuning, waxing, and repair
               services within 15 miles.
             </p>
-            <div className="shop-actions">
-              <button className="btn-primary" onClick={handleFindShops} disabled={isBusy}>
-                {isBusy
-                  ? status === 'locating'
-                    ? 'Detecting location…'
-                    : 'Searching…'
-                  : 'Use my location'}
-              </button>
-              <button className="btn-secondary" onClick={onBackToHome}>
-                Back to home
-              </button>
-            </div>
-            {status === 'error' && <p className="shop-error-msg">{errorMsg}</p>}
+            {isBusy && (
+              <p className="shop-status-msg">
+                {status === 'locating' ? 'Detecting your location…' : 'Searching for nearby shops…'}
+              </p>
+            )}
+            {status === 'error' && (
+              <>
+                <p className="shop-error-msg">{errorMsg}</p>
+                <div className="shop-actions">
+                  <button className="btn-primary" onClick={handleFindShops}>
+                    Try again
+                  </button>
+                  <button className="btn-secondary" onClick={onBackToHome}>
+                    Back to home
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div className="shop-results">
