@@ -55,14 +55,14 @@ export default function Header({ currentPage, onNavigate, currentUser, onLogout 
               <button
                 type="button"
                 className="btn-ghost"
-                onClick={() => onNavigate('user')}
+                onClick={() => onNavigate('signIn')}
               >
                 Sign In
               </button>
               <button
                 type="button"
                 className="btn-primary"
-                onClick={() => onNavigate('user')}
+                onClick={() => onNavigate('createAccount')}
               >
                 Create Account
               </button>

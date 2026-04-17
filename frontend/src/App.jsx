@@ -13,11 +13,25 @@ function App() {
   const [results, setResults] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [assessmentError, setAssessmentError] = useState(false);
+  const [userPageInitialView, setUserPageInitialView] = useState(null);
 
   const handleNavigate = (page) => {
     if (page === 'home') {
       handleBackToHome();
       return;
+    }
+    if (page === 'signIn') {
+      setUserPageInitialView('login');
+      setCurrentPage('user');
+      return;
+    }
+    if (page === 'createAccount') {
+      setUserPageInitialView('create');
+      setCurrentPage('user');
+      return;
+    }
+    if (page === 'user') {
+      setUserPageInitialView(null);
     }
     setCurrentPage(page);
   };
@@ -98,6 +112,8 @@ function App() {
       {currentPage === 'findShop' && <FindShopPage onBackToHome={handleBackToHome} />}
       {currentPage === 'user' && (
         <UserPage
+          key={userPageInitialView}
+          initialView={userPageInitialView}
           currentUser={currentUser}
           onLogin={handleLogin}
           onLogout={handleLogout}

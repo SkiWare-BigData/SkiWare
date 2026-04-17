@@ -90,9 +90,13 @@ function formatHeight(heightIn) {
   return `${feet}' ${inches}"`;
 }
 
-export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome }) {
-  const [view, setView] = useState(currentUser ? 'profile' : 'idle');
-  const [form, setForm] = useState(currentUser ? userToForm(currentUser) : EMPTY_FORM);
+export default function UserPage({ initialView, currentUser, onLogin, onLogout, onBackToHome }) {
+  const [view, setView] = useState(
+    initialView || (currentUser ? 'profile' : 'idle')
+  );
+  const [form, setForm] = useState(
+    initialView === 'create' ? EMPTY_FORM : currentUser ? userToForm(currentUser) : EMPTY_FORM
+  );
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
