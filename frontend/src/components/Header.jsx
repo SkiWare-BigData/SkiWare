@@ -1,10 +1,14 @@
-const navItems = [
+const baseNavItems = [
   { id: 'home', label: 'Home' },
   { id: 'form', label: 'Assessment' },
   { id: 'findShop', label: 'Find a Shop' },
 ];
 
 export default function Header({ currentPage, onNavigate, currentUser, onLogout }) {
+  const navItems = currentUser
+    ? [...baseNavItems, { id: 'history', label: 'History' }]
+    : baseNavItems;
+
   return (
     <header className="header">
       <div className="header-content">

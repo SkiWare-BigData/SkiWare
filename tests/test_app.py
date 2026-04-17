@@ -557,6 +557,89 @@ def test_generator_includes_engagement_metadata_in_prompt():
     assert "Authoritative reference" in prompt
 
 
+def test_assess_saves_to_history_when_user_id_provided():
+    from unittest.mock import AsyncMock, patch
+
+    client.put(
+        "/api/users/history-user",
+        json=_valid_user_payload(name="History User", email="history@example.com"),
+    )
+
+    with patch("backend.services.assessment.retrieve_relevant_chunks", new_callable=AsyncMock) as mock_retrieve, \
+         patch("backend.services.assessment.generate_assessment", new_callable=AsyncMock) as mock_generate:
+
+        mock_retrieve.return_value = []
+        mock_generate.return_value = _mock_llm_response()
+
+        response = client.post(
+            "/api/assess?userId=history-user",
+            json={"equipmentType": "skis", "brand": "Rossignol", "daysSinceWax": 5, "daysSinceEdgeWork": 3, "coreShots": 0},
+        )
+
+    assert response.status_code == 200
+
+    history = client.get("/api/assessments?userId=history-user")
+    assert history.status_code == 200
+    assessments = history.json()["assessments"]
+    assert len(assessments) == 1
+    assert assessments[0]["brand"] == "Rossignol"
+    assert assessments[0]["safeToSki"] is True
+
+    detail = client.get(f"/api/assessments/{assessments[0]['id']}")
+    assert detail.status_code == 200
+    assert detail.json()["response"]["verdict"] == "DIY"
+    assert detail.json()["request"]["equipmentType"] == "skis"
+
+
+def test_assess_without_user_id_does_not_save():
+    from unittest.mock import AsyncMock, patch
+
+    with patch("backend.services.assessment.retrieve_relevant_chunks", new_callable=AsyncMock) as mock_retrieve, \
+         patch("backend.services.assessment.generate_assessment", new_callable=AsyncMock) as mock_generate:
+
+        mock_retrieve.return_value = []
+        mock_generate.return_value = _mock_llm_response()
+
+        response = client.post("/api/assess", json={"equipmentType": "skis"})
+
+    assert response.status_code == 200
+
+    history = client.get("/api/assessments?userId=nonexistent")
+    assert history.status_code == 200
+    assert history.json()["assessments"] == []
+
+
+def test_assessment_detail_returns_404_for_missing():
+    response = client.get("/api/assessments/99999")
+    assert response.status_code == 404
+
+
+def test_assessment_history_returns_multiple_sorted_by_date():
+    from unittest.mock import AsyncMock, patch
+
+    client.put(
+        "/api/users/multi-history",
+        json=_valid_user_payload(name="Multi History", email="multi@example.com"),
+    )
+
+    with patch("backend.services.assessment.retrieve_relevant_chunks", new_callable=AsyncMock) as mock_retrieve, \
+         patch("backend.services.assessment.generate_assessment", new_callable=AsyncMock) as mock_generate:
+
+        mock_retrieve.return_value = []
+
+        mock_generate.return_value = _mock_llm_response(brand="K2")
+        client.post("/api/assess?userId=multi-history", json={"equipmentType": "skis", "brand": "K2"})
+
+        mock_generate.return_value = _mock_llm_response(brand="Burton")
+        client.post("/api/assess?userId=multi-history", json={"equipmentType": "snowboard", "brand": "Burton"})
+
+    history = client.get("/api/assessments?userId=multi-history")
+    assessments = history.json()["assessments"]
+    assert len(assessments) == 2
+    assert assessments[0]["brand"] == "Burton"
+    assert assessments[1]["brand"] == "K2"
+
+
 def test_orchestrator_merges_rule_based_recommendations():
     import asyncio
     from unittest.mock import AsyncMock, patch
