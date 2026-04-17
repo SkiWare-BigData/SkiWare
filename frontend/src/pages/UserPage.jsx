@@ -427,7 +427,7 @@ export default function UserPage({ initialView, currentUser, onLogin, onLogout, 
 
           <div className="profile-actions">
             <button
-              className="btn-primary"
+              className="btn-secondary"
               onClick={() => {
                 setForm(userToForm(u));
                 setView('edit');
@@ -444,7 +444,7 @@ export default function UserPage({ initialView, currentUser, onLogin, onLogout, 
             >
               Manage equipment
             </button>
-            <button className="btn-primary" onClick={handleSignOut}>
+            <button className="btn-secondary" onClick={handleSignOut}>
               Sign out
             </button>
           </div>

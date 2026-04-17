@@ -25,8 +25,8 @@ export default function ResultsPage({ formData, results, error, onBackToHome, on
           <h2>{equipmentName}</h2>
           <p className="summary-subtitle">Based on what you told us about your setup.</p>
           <div className="summary-grid">
-            <SummaryItem label="Snow" value={capitalize(formData.terrain)} />
-            <SummaryItem label="Terrain" value={capitalize(formData.style)} />
+            <SummaryItem label="Snow" value={capitalize(formData.snowCondition || formData.terrain)} />
+            <SummaryItem label="Terrain" value={capitalize(formData.terrainType || formData.style)} />
             <SummaryItem label="Days since wax" value={String(formData.daysSinceWax)} />
             <SummaryItem label="Days since edge" value={String(formData.daysSinceEdgeWork)} />
           </div>

@@ -28,9 +28,9 @@ async def retrieve_relevant_chunks(db: AsyncSession, query: str) -> list[dict]:
 
     sql = text("""
         SELECT chunk_text, metadata,
-               1 - (embedding <=> :query_vec::vector) AS similarity
+               1 - (embedding <=> CAST(:query_vec AS vector)) AS similarity
         FROM ski_knowledge_chunks
-        WHERE 1 - (embedding <=> :query_vec::vector) >= :threshold
+        WHERE 1 - (embedding <=> CAST(:query_vec AS vector)) >= :threshold
         ORDER BY similarity DESC
         LIMIT :top_k
     """)
@@ -43,6 +43,7 @@ async def retrieve_relevant_chunks(db: AsyncSession, query: str) -> list[dict]:
         })
         rows = result.fetchall()
     except Exception:
+        await db.rollback()
         return []
 
     return [{"chunk_text": row.chunk_text, "metadata": row.metadata} for row in rows]

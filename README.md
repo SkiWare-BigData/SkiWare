@@ -1,6 +1,6 @@
 # SkiWare
 
-An intelligent web application that helps skiers identify, assess, and repair ski damage. SkiWare combines a RAG system with ski-specific knowledge to give users informed, personalized repair guidance — complete with severity assessments, estimated shop costs, step-by-step DIY instructions, YouTube repair guides, and links to purchase materials.
+An AI-powered ski and snowboard damage assessment and maintenance web app. Users describe their gear and any issues; SkiWare returns safety flags, severity ratings, DIY repair instructions, estimated shop costs, parts checklists, YouTube guides, and nearby shop locations — all powered by a RAG pipeline over a ski-specific knowledge base.
 
 ---
 
@@ -56,19 +56,10 @@ A free web application where users input their ski info and describe their issue
 | LLM | Gemini API (Google) |
 | Vector Database | pgvector on GCP Cloud SQL (PostgreSQL) |
 | Data Collection | GCP Cloud Run Jobs (scheduled Python agent) |
+| Shop Search | Google Places API (New) |
 | Hosting | GCP Cloud Run |
 | Container Registry | GCP Artifact Registry |
 | CI/CD | GitHub Actions |
-| Layer | Current | Target |
-|---|---|---|
-| Backend | Python / FastAPI |
-| Frontend | React |
-| LLM | — | Gemini API (Google) |
-| Vector Database | — | pgvector on GCP Cloud SQL (PostgreSQL) |
-| Data Collection | — | GCP Cloud Run Jobs (scheduled Python agent) |
-| Hosting | GCP Cloud Run | GCP Cloud Run |
-| Container Registry | GCP Artifact Registry | GCP Artifact Registry |
-| CI/CD | GitHub Actions | GitHub Actions |
 
 > **Note:** The backend runs on FastAPI and the React frontend runs through Vite in local Docker development. See [CONTRIBUTING.md](CONTRIBUTING.md) for the current workflow.
 
@@ -108,42 +99,32 @@ Cloud SQL (PostgreSQL + pgvector)
 
 ## Features
 
-Current backend layout:
-
-```
-backend/
-├── main.py
-├── models.py
-├── routers/
-└── services/
-```
-
-### MVP
+### Shipped
 | Feature | Description |
 |---|---|
-| Ski info modal | Brand, model, year, length, condition, last service, issue description |
+| Assessment form | Equipment type, brand, length, age, snow type, terrain, maintenance history |
 | Safety flag | Prominent yes/no — is it safe to ski on? |
 | Severity indicator | 1–5 scale (color-coded) with DIY vs. shop verdict |
 | Estimated shop cost | Dollar range of what a shop would charge for the same repair |
 | Time + skill estimate | How long the repair takes and beginner / intermediate / advanced rating |
 | Repair instructions | Step-by-step DIY guide |
-| Parts checklist | Specific products with links to purchase |
-| YouTube guides | Relevant repair video links |
+| Parts checklist | Specific products with links to Amazon, REI, evo, Backcountry, Peter Glenn |
+| YouTube guides | Relevant repair video search links |
+| Nearby shops on results | Auto-detects location after assessment; shows top 5 shops ranked by rating + proximity |
+| Find a Shop page | Full shop browser sorted by distance; shows all results with ratings and review counts |
+| Google Places ratings | Shop cards show star rating and review count from Google Places API |
+| User accounts | Sign up, log in, profile with equipment list and rider preferences |
+| Dynamic assessment form | Pre-fills from user profile (equipment, skill level, terrain preference) |
+| Auth button routing | Sign In / Create Account buttons route directly to the correct form view |
 
-### v1
+### Planned
 | Feature | Description |
 |---|---|
 | Automated knowledge base | Cloud Run Job scrapes and embeds ski data on a schedule |
 | Ski value estimator | "Your ski is worth ~$X used — a $Y repair may not be worth it" |
 | Maintenance calendar | Wax/sharpen reminders based on ski type and usage |
-| Shop locator | Google Maps API — nearby shops if user chooses not to DIY |
 | Condition report | Shareable PDF summary (useful for buying/selling used skis) |
-
-### v2
-| Feature | Description |
-|---|---|
 | Photo upload | Vision model classifies damage type from a photo |
-| React frontend polish | Richer UI, better mobile experience |
 | Community repair logs | "47 people fixed this on a Rossignol Experience 88 — here's what worked" |
 | Ski shop dashboard | Shop-facing version for quote generation and work orders |
 
@@ -162,24 +143,26 @@ backend/
 
 ### MVP
 - [x] Migrate backend from Flask → FastAPI
-- [x] Build React frontend with ski info input modal
-- [ ] Gemini API integration with structured response (safety flag, severity, cost estimate, time/skill, instructions, parts, YouTube links)
-- [ ] Basic RAG pipeline with pgvector
-- [ ] Initial knowledge base seeded manually
+- [x] Build React / Vite frontend
+- [x] Gemini API integration with structured response (safety flag, severity, cost estimate, time/skill, instructions, parts, YouTube links)
+- [x] RAG pipeline with pgvector
+- [x] Initial knowledge base seeded manually
+- [x] User accounts with equipment profiles
+- [x] Dynamic assessment form pre-filled from user profile
+- [x] Shop locator — Google Places API with haversine distance
+- [x] Google Places ratings and review counts on shop cards
+- [x] Nearby shops section on assessment results page (top-5 Bayesian ranking)
 
 ### v1
-- [ ] Data collection Cloud Run Job
+- [ ] Expand RAG knowledge base via Cloud Run data collection job
 - [ ] Ski value estimator
-- [ ] Maintenance calendar
-- [ ] Shop locator (Google Maps API)
+- [ ] Maintenance calendar / wax reminders
 - [ ] Condition report PDF export
-- [ ] GitHub issue creation agent for team task tracking
 
 ### v2
 - [ ] Vision model for photo-based damage classification
-- [x] React frontend
 - [ ] Community repair logs
-- [ ] Ski shop dashboard
+- [ ] Ski shop dashboard for quote generation
 
 ---
 
@@ -196,8 +179,6 @@ backend/
 
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup, branching workflow, and PR guidelines.
-
-this is a read me test change
 
 ---
 

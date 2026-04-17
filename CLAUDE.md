@@ -34,7 +34,7 @@ SkiWare/
 │   ├── routers/
 │   │   ├── assessments.py   # POST /api/assess
 │   │   ├── users.py         # User management endpoints
-│   │   └── shops.py         # GET /api/shops/nearest
+│   │   └── shops.py         # GET /api/shops/nearest?lat&lon&ranked
 │   ├── services/
 │   │   ├── assessment.py    # Assessment logic
 │   │   ├── users.py         # User service logic
@@ -52,8 +52,9 @@ SkiWare/
 │       └── pages/
 │           ├── HomePage.jsx
 │           ├── FormPage.jsx
-│           ├── ResultsPage.jsx
-│           └── FindShopPage.jsx
+│           ├── ResultsPage.jsx   # includes NearbyShops component (auto-fetches, ranked=true)
+│           ├── FindShopPage.jsx  # full shop browser (all results, sorted by distance)
+│           └── UserPage.jsx
 ├── requirements.txt
 ├── docker-compose.yml
 └── Dockerfile
@@ -90,8 +91,8 @@ Routers handle only HTTP concerns: parameter parsing, calling a service function
 ```python
 # routers/shops.py
 @router.get("/shops/nearest")
-async def nearest_shops(lat: float = Query(...), lon: float = Query(...)):
-    return await find_nearest_shops(lat, lon)  # all logic lives in the service
+async def nearest_shops(lat: float = Query(...), lon: float = Query(...), ranked: bool = Query(False)):
+    return await find_nearest_shops(lat, lon, ranked=ranked)  # all logic lives in the service
 ```
 
 **Wrong pattern:**
@@ -106,11 +107,19 @@ async def nearest_shops(lat: float, lon: float):
 
 When adding a new endpoint, create or update a file in `backend/services/` first, then wire it up in the router with a one- or two-line handler.
 
+#### Shop endpoint behaviour
+`GET /api/shops/nearest` accepts an optional `ranked` boolean (default `false`):
+- `ranked=false` — returns **all** results sorted by distance ascending. Used by `FindShopPage`.
+- `ranked=true` — returns **top 5** results scored by Bayesian-adjusted rating + proximity (equal weights). Used by the `NearbyShops` component inside `ResultsPage`. The Bayesian prior is 3.5 stars at 25 reviews — shops with thin review counts are pulled toward the prior before scoring.
+
+The response always includes `rating` (float | null) and `user_rating_count` (int | null) from the Google Places API.
+
 ### Frontend
 - Navigation is a state machine in `App.jsx` — `currentPage` drives which page renders
 - The `<Header>` is rendered once at the `App` level; individual pages must **not** render their own header
 - All styles live in `App.css` — no separate component stylesheets
 - Pages receive navigation callbacks as props (`onBackToHome`, `onFindShop`, etc.)
+- `UserPage` accepts an `initialView` prop (`'login'` | `'create'` | `null`). The Header's Sign In button passes `'login'` and Create Account passes `'create'` via `handleNavigate` in `App.jsx`. Navigating to `'user'` directly leaves `initialView` null (defaults to profile if logged in, idle otherwise).
 
 ---
 

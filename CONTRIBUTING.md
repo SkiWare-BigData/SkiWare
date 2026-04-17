@@ -9,32 +9,36 @@ SkiWare is an AI-powered ski damage assessment tool. Users input their ski detai
 ```
 SkiWare/
 ├── backend/
-│   ├── main.py              # FastAPI app entrypoint
-│   ├── models.py            # Shared Pydantic request/response models
-│   ├── routers/             # API route handlers
-│   └── services/            # Business logic behind route handlers
-├── .github/
-│   └── workflows/
-│       └── deploy.yml       # CI/CD — auto-deploys to GCP Cloud Run on push to main
-├── Dockerfile               # Container definition
-├── docker-compose.yml       # Local development setup
-├── requirements.txt         # Python dependencies
-└── setup-gcp.sh             # One-time GCP bootstrap script (already run, don't re-run)
-```
-
-Current structure:
-```
-SkiWare/
-├── backend/
-│   ├── main.py              # FastAPI app entrypoint
-│   ├── models.py            # Pydantic models for request/response validation
-│   ├── routers/             # API route handlers
-│   └── services/            # Business logic behind the API
-├── frontend/                # React app (Create React App or Vite)
-│   ├── src/
-│   └── package.json
+│   ├── main.py              # FastAPI app entrypoint — registers all routers
+│   ├── routers/
+│   │   ├── assessments.py   # POST /api/assess
+│   │   ├── users.py         # User CRUD + auth endpoints
+│   │   └── shops.py         # GET /api/shops/nearest
+│   ├── services/
+│   │   ├── assessment.py    # RAG + Gemini assessment logic
+│   │   ├── users.py         # User service logic
+│   │   ├── shops.py         # Google Places API + ranking
+│   │   └── calculate_DIN.py # DIN binding calculation
+│   └── models/
+│       ├── assesment.py     # Assessment request/response models
+│       ├── user.py          # User Pydantic models
+│       └── tables.py        # SQLAlchemy ORM table definitions
+├── frontend/
+│   └── src/
+│       ├── App.jsx          # Root: page state machine + routing
+│       ├── App.css          # All styles (single stylesheet)
+│       ├── components/
+│       │   └── Header.jsx
+│       └── pages/
+│           ├── HomePage.jsx
+│           ├── FormPage.jsx
+│           ├── ResultsPage.jsx
+│           ├── FindShopPage.jsx
+│           └── UserPage.jsx
+├── alembic/                 # Database migrations
+├── tests/                   # pytest test suite
 ├── .github/workflows/
-│   └── deploy.yml
+│   └── deploy.yml           # CI/CD — deploys to GCP Cloud Run on push to main
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
@@ -43,10 +47,6 @@ SkiWare/
 ---
 
 ## Getting Started
-
-### Prerequisites
-- Python 3.12+
-- Docker (for running locally in a container)
 
 ### Prerequisites
 - Python 3.12+
@@ -219,7 +219,7 @@ Deployment on `main` then:
 The service provides:
 
 1. `POST /api/assess` — RAG-backed assessment via Gemini + pgvector retrieval
-2. `GET /api/shops/nearest` — Google Places API shop search with haversine distance
+2. `GET /api/shops/nearest?lat=&lon=&ranked=` — Google Places API shop search with haversine distance, Google ratings, and review counts. `ranked=true` returns the top 5 shops scored by a Bayesian-adjusted rating + proximity formula; `ranked=false` (default) returns all results sorted by distance ascending.
 3. `PUT/GET/DELETE /api/users/:id` — user CRUD with DIN calculation
 4. `POST /api/auth/login` — email/password authentication
 
@@ -229,42 +229,26 @@ The service provides:
 
 ### High priority
 
-**1. Update ResultsPage to display the full MVP response**
-
-`ResultsPage.jsx` still renders the old shape (recommendations + tips only). It needs to show all fields the backend now returns:
-- Safety verdict (`safeToSki`, `severity` 1–5, `verdict` DIY/SHOP)
-- Repair steps (`repairSteps`)
-- Parts list (`partsList`) with shopping links to Amazon, REI, evo, Backcountry, Peter Glenn (built from `Part.searchQuery`)
-- YouTube suggestions (`youtubeSuggestions`)
-- Rule-based recommendations (`recommendations`) — keep these, they come from the orchestrator
-
-**2. Expand the RAG knowledge base**
+**1. Expand the RAG knowledge base**
 
 The `data_agent` pipeline has only ingested 12 chunks (4 static docs). To improve assessment quality:
 - Set `YOUTUBE_API_KEY` in the environment and populate `YouTubeSource.VIDEO_IDS` with real ski repair video IDs (evo, Sidecut Tuning, Peter Glenn channels are good sources)
 - Fix or replace the web scraper sources — REI and evo block bots; swap for scraper-friendly alternatives or add proper `User-Agent` headers
 - Re-run `python -m data_agent` against production Cloud SQL after adding sources
 
-**3. Add shopping links for parts**
-
-`Part.searchQuery` is a generic product string (e.g. `"Swix P-tex ski base repair candle"`). The frontend should build links from it:
-```js
-const retailers = [
-  { name: 'REI', url: (q) => `https://www.rei.com/search?q=${encodeURIComponent(q)}` },
-  { name: 'evo', url: (q) => `https://www.evo.com/search?q=${encodeURIComponent(q)}` },
-  { name: 'Amazon', url: (q) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}` },
-];
-```
-
-### Lower priority
-
-**4. End-to-end production test**
+**2. End-to-end production test**
 
 Run a full assess request against the live Cloud Run deployment with `GEMINI_API_KEY` set and Cloud SQL populated. Verify the RAG path returns non-empty `repairSteps` and `partsList`.
 
-**5. MyFit / DIN page**
+### Lower priority
 
-The nav bar previously had a "MyFit" placeholder. If the user profile + DIN feature is meant to be a standalone page, wire it up: add a `MyFitPage.jsx`, register it in `App.jsx`, and add it back to `Header.jsx`.
+**3. Ski value estimator**
+
+Add an estimate of the gear's resale value alongside the repair cost so users can decide whether a repair is worth it.
+
+**4. Condition report PDF export**
+
+Shareable summary of the assessment result — useful for buying/selling used gear.
 
 ---
 
