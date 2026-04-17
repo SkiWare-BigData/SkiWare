@@ -350,6 +350,7 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
           </div>
 
           <div className="profile-detail-list">
+            <div className="profile-section-header">Riding style</div>
             <ProfileDetail label="Sport" value={u.preferredSport} />
             <ProfileDetail label="Skill level" value={capitalize(u.skillLevel)} />
             <ProfileDetail
@@ -360,52 +361,61 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
               label="Preferred terrain"
               value={capitalize(u.preferredTerrain)}
             />
-            {u.birthday && <ProfileDetail label="Birthday" value={u.birthday} />}
-            {u.weightLbs != null && (
-              <ProfileDetail label="Weight" value={`${u.weightLbs} lbs`} />
+
+            {(u.birthday || u.weightLbs != null || u.heightIn != null || u.bootSoleLengthMm != null) && (
+              <>
+                <div className="profile-section-header">Physical &amp; binding</div>
+                {u.birthday && <ProfileDetail label="Birthday" value={u.birthday} />}
+                {u.weightLbs != null && (
+                  <ProfileDetail label="Weight" value={`${u.weightLbs} lbs`} />
+                )}
+                {u.heightIn != null && (
+                  <ProfileDetail label="Height" value={formatHeight(u.heightIn)} />
+                )}
+                {u.bootSoleLengthMm != null && (
+                  <ProfileDetail
+                    label="Boot sole length"
+                    value={`${u.bootSoleLengthMm} mm`}
+                  />
+                )}
+              </>
             )}
-            {u.heightIn != null && (
-              <ProfileDetail label="Height" value={formatHeight(u.heightIn)} />
-            )}
-            {u.bootSoleLengthMm != null && (
-              <ProfileDetail
-                label="Boot sole length"
-                value={`${u.bootSoleLengthMm} mm`}
-              />
-            )}
+
             {u.equipment && u.equipment.length > 0 && (
-              <div className="profile-detail" style={{ gridColumn: '1 / -1' }}>
-                <div className="profile-detail-label">Equipment</div>
-                <ul className="profile-equipment-list">
-                  {u.equipment.map((item, i) => (
-                    <li key={i} className="profile-equipment-item">
-                      {item.images?.[0] && (
-                        <img
-                          src={item.images[0]}
-                          alt=""
-                          className="profile-equip-thumb"
-                        />
-                      )}
-                      <span>
-                        {[
-                          item.name,
-                          item.length && `${item.length}cm`,
-                          item.width && `${item.width}mm`,
-                          item.bindingType,
-                      ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <>
+                <div className="profile-section-header">Equipment</div>
+                <div className="profile-detail" style={{ gridColumn: '1 / -1' }}>
+                  <ul className="profile-equipment-list">
+                    {u.equipment.map((item, i) => (
+                      <li key={i} className="profile-equipment-item">
+                        {item.images?.[0] && (
+                          <img
+                            src={item.images[0]}
+                            alt=""
+                            className="profile-equip-thumb"
+                          />
+                        )}
+                        <span>
+                          {[
+                            item.name,
+                            item.length && `${item.length}cm`,
+                            item.width && `${item.width}mm`,
+                            item.bindingType,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
             )}
           </div>
 
-          <div className="form-buttons">
+          <div className="profile-actions">
             <button
-              className="btn-secondary"
+              className="btn-primary"
               onClick={() => {
                 setForm(userToForm(u));
                 setView('edit');
@@ -413,13 +423,10 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
             >
               Edit profile
             </button>
-            <button className="btn-primary" onClick={handleSignOut}>
+            <button className="btn-ghost" onClick={handleSignOut}>
               Sign out
             </button>
           </div>
-          <button className="btn-ghost btn-full" onClick={onBackToHome}>
-            Back to home
-          </button>
         </section>
       </main>
     );
