@@ -70,6 +70,7 @@ async def generate_assessment(
         client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
     contents = f"""Equipment: {request.equipmentType} — {request.brand}
+Equipment age: {request.age}
 Terrain: {request.terrain}
 Days since wax: {request.daysSinceWax}
 Days since edge work: {request.daysSinceEdgeWork}

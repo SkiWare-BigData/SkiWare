@@ -20,6 +20,19 @@ async def build_assessment_response(
 def _build_rule_based(request: AssessmentRequest) -> list[Recommendation]:
     recommendations: list[Recommendation] = []
 
+    if request.age == "5+ years":
+        recommendations.append(
+            Recommendation(
+                title="Inspect Aging Equipment",
+                severity="MEDIUM",
+                description=(
+                    f"Your {request.equipmentType} are over 5 years old. Check for delamination, "
+                    "binding wear, and base oxidation. Older gear may need a professional once-over "
+                    "to confirm it is still safe to ride."
+                ),
+            )
+        )
+
     if request.daysSinceWax >= 12:
         recommendations.append(
             Recommendation(

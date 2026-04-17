@@ -13,6 +13,13 @@ const SKIER_TYPES = [
   { value: '3', label: 'Type 3', sub: 'Aggressive' },
 ];
 
+const EQUIPMENT_AGE_OPTIONS = [
+  { value: '0-1 year', label: '0-1 years' },
+  { value: '1-2 years', label: '1-2 years' },
+  { value: '2-5 years', label: '2-5 years' },
+  { value: '5+ years', label: '5+ years' },
+];
+
 const SPORTS = ['Skier', 'Snowboarder'];
 const TERRAIN = ['groomers', 'park', 'powder', 'backcountry', 'hybrid'];
 
@@ -392,6 +399,7 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
                           item.length && `${item.length}cm`,
                           item.width && `${item.width}mm`,
                           item.bindingType,
+                          item.age,
                       ]
                           .filter(Boolean)
                           .join(' · ')}
@@ -651,6 +659,20 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
                             placeholder="Alpine, Tech/Pin, Strap…"
                           />
                         </div>
+                        <div className="form-group">
+                          <label>Age</label>
+                          <select
+                            value={item.age ?? ''}
+                            onChange={updateItem('age')}
+                          >
+                            <option value="">Select age…</option>
+                            {EQUIPMENT_AGE_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
 
                       {images.length > 0 && (
@@ -715,7 +737,7 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
                   onClick={() =>
                     setField('equipment')([
                       ...form.equipment,
-                      { name: '', length: '', width: '', bindingType: '', images: [] },
+                      { name: '', length: '', width: '', bindingType: '', age: '', images: [] },
                     ])
                   }
                 >
