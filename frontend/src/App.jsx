@@ -6,6 +6,7 @@ import FormPage from './pages/FormPage';
 import ResultsPage from './pages/ResultsPage';
 import FindShopPage from './pages/FindShopPage';
 import UserPage from './pages/UserPage';
+import HistoryPage from './pages/HistoryPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -35,7 +36,10 @@ function App() {
     setCurrentPage('results');
 
     try {
-      const response = await fetch('/api/assess', {
+      const url = currentUser
+        ? `/api/assess?userId=${encodeURIComponent(currentUser.id)}`
+        : '/api/assess';
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -50,6 +54,13 @@ function App() {
       console.error('Assessment request failed', error);
       setAssessmentError(true);
     }
+  };
+
+  const handleViewAssessment = (requestData, responseData) => {
+    setFormData(requestData);
+    setResults(responseData);
+    setAssessmentError(false);
+    setCurrentPage('results');
   };
 
   const handleBackToHome = () => {
@@ -96,6 +107,13 @@ function App() {
         />
       )}
       {currentPage === 'findShop' && <FindShopPage onBackToHome={handleBackToHome} />}
+      {currentPage === 'history' && (
+        <HistoryPage
+          currentUser={currentUser}
+          onViewAssessment={handleViewAssessment}
+          onBackToHome={handleBackToHome}
+        />
+      )}
       {currentPage === 'user' && (
         <UserPage
           currentUser={currentUser}

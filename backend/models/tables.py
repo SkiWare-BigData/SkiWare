@@ -1,4 +1,4 @@
-from sqlalchemy import JSON, Column, Date, DateTime, Float, Integer, String
+from sqlalchemy import JSON, Boolean, Column, Date, DateTime, Float, ForeignKey, Integer, String
 
 from backend.database import Base
 
@@ -22,3 +22,18 @@ class UserTable(Base):
     password_hash = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False)
     updated_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class AssessmentTable(Base):
+    __tablename__ = "assessments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    equipment_type = Column(String(20), nullable=False)
+    brand = Column(String, nullable=False, server_default="")
+    safe_to_ski = Column(Boolean, nullable=False)
+    severity = Column(Integer, nullable=False)
+    verdict = Column(String(10), nullable=False)
+    request_data = Column(JSON, nullable=False)
+    response_data = Column(JSON, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False)

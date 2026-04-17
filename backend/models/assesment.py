@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -45,3 +46,22 @@ class AssessmentResponse(BaseModel):
     partsList: list[Part]
     youtubeSuggestions: list[str]
     recommendations: list[Recommendation] = []  # set by orchestrator, not Gemini
+
+
+class SavedAssessment(BaseModel):
+    id: int
+    equipmentType: str
+    brand: str
+    safeToSki: bool
+    severity: int
+    verdict: str
+    createdAt: datetime
+
+
+class SavedAssessmentDetail(SavedAssessment):
+    request: AssessmentRequest
+    response: AssessmentResponse
+
+
+class AssessmentHistoryResponse(BaseModel):
+    assessments: list[SavedAssessment]
