@@ -1186,6 +1186,30 @@ input[type='range']::-moz-range-thumb {
   color: var(--danger);
 }
 
+.shop-location-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.shop-location-icon {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.shop-location-prompt h1 {
+  font-size: 24px;
+  margin: 0;
+}
+
+.shop-location-prompt p {
+  color: var(--text-muted);
+  max-width: 420px;
+  margin-bottom: 14px;
+}
+
 .shop-results {
   display: flex;
   flex-direction: column;
