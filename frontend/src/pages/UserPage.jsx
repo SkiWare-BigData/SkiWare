@@ -435,9 +435,208 @@ export default function UserPage({ initialView, currentUser, onLogin, onLogout, 
             >
               Edit profile
             </button>
-            <button className="btn-ghost" onClick={handleSignOut}>
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                setForm(userToForm(u));
+                setView('equipment');
+              }}
+            >
+              Manage equipment
+            </button>
+            <button className="btn-primary" onClick={handleSignOut}>
               Sign out
             </button>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  // ── Equipment management ────────────────────────────────────────────────────
+  if (view === 'equipment' && currentUser) {
+    const handleEquipmentSave = async () => {
+      setLoading(true);
+      setSubmitError('');
+      try {
+        const payload = buildPayload(userToForm(currentUser));
+        payload.equipment = form.equipment;
+        const res = await fetch(`/api/users/${encodeURIComponent(currentUser.email)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          const user = await res.json();
+          onLogin(user);
+          setForm(userToForm(user));
+          setView('profile');
+        } else {
+          const err = await res.json().catch(() => ({}));
+          setSubmitError(
+            typeof err.detail === 'string'
+              ? err.detail
+              : 'Could not save equipment. Please try again.'
+          );
+        }
+      } catch {
+        setSubmitError('Connection error. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return (
+      <main className="main-container">
+        <section className="form-page">
+          <div className="page-header">
+            <h1>Manage equipment</h1>
+            <p>Add, edit, or remove your gear.</p>
+          </div>
+
+          <div className="assessment-form">
+            <div className="form-section">
+              <div className="equipment-editor">
+                {form.equipment.map((item, i) => {
+                  const updateItem = (field) => (e) => {
+                    const updated = form.equipment.map((eq, j) =>
+                      j === i ? { ...eq, [field]: e.target.value } : eq
+                    );
+                    setField('equipment')(updated);
+                  };
+                  const images = item.images || [];
+                  return (
+                    <div key={i} className="equipment-item-card">
+                      <div className="equipment-item-fields">
+                        <div className="form-group">
+                          <label>Name / brand</label>
+                          <input
+                            type="text"
+                            value={item.name}
+                            onChange={updateItem('name')}
+                            placeholder="Rossignol Experience 88"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Length (cm)</label>
+                          <input
+                            type="text"
+                            value={item.length}
+                            onChange={updateItem('length')}
+                            placeholder="180"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Width (mm)</label>
+                          <input
+                            type="text"
+                            value={item.width}
+                            onChange={updateItem('width')}
+                            placeholder="88"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Binding type</label>
+                          <input
+                            type="text"
+                            value={item.bindingType ?? ''}
+                            onChange={updateItem('bindingType')}
+                            placeholder="Alpine, Tech/Pin, Strap…"
+                          />
+                        </div>
+                      </div>
+
+                      {images.length > 0 && (
+                        <div className="equipment-images">
+                          {images.map((url, imgIdx) => (
+                            <div
+                              key={imgIdx}
+                              className={`equipment-image-thumb${imgIdx === 0 ? ' default' : ''}`}
+                            >
+                              <img src={url} alt={imgIdx === 0 ? 'Default photo' : `Photo ${imgIdx + 1}`} />
+                              {imgIdx === 0 && (
+                                <span className="default-badge">Default</span>
+                              )}
+                              <button
+                                type="button"
+                                className="remove-image-btn"
+                                onClick={() => removeImage(i, imgIdx)}
+                                aria-label="Remove photo"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="equipment-item-footer">
+                        <label className={`add-photo-label${uploadingIdx === i ? ' uploading' : ''}`}>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="visually-hidden"
+                            ref={(el) => { fileInputRefs.current[i] = el; }}
+                            onChange={(e) => handleImageUpload(i, e)}
+                            disabled={uploadingIdx === i}
+                          />
+                          {uploadingIdx === i
+                            ? <><span className="spinner" />Uploading…</>
+                            : '+ Add photo'}
+                        </label>
+                        <button
+                          type="button"
+                          className="btn-ghost"
+                          onClick={() =>
+                            setField('equipment')(
+                              form.equipment.filter((_, j) => j !== i)
+                            )
+                          }
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      {uploadErrors[i] && (
+                        <p className="upload-error">{uploadErrors[i]}</p>
+                      )}
+                    </div>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() =>
+                    setField('equipment')([
+                      ...form.equipment,
+                      { name: '', length: '', width: '', bindingType: '', images: [] },
+                    ])
+                  }
+                >
+                  + Add equipment
+                </button>
+              </div>
+            </div>
+
+            {submitError && <p className="form-error">{submitError}</p>}
+
+            <div className="form-buttons">
+              <button
+                className="btn-primary"
+                onClick={handleEquipmentSave}
+                disabled={loading}
+              >
+                {loading ? 'Saving…' : 'Save equipment'}
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setForm(userToForm(currentUser));
+                  setView('profile');
+                }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </section>
       </main>
@@ -617,143 +816,6 @@ export default function UserPage({ initialView, currentUser, onLogin, onLogout, 
                 {SPORTS.map((s) => (
                   <TileButton key={s} field="preferredSport" value={s} label={s} />
                 ))}
-              </div>
-            </div>
-
-            <div className="choice-group">
-              <div className="choice-group-title">Equipment</div>
-              <div className="equipment-editor">
-                {form.equipment.map((item, i) => {
-                  const updateItem = (field) => (e) => {
-                    const updated = form.equipment.map((eq, j) =>
-                      j === i ? { ...eq, [field]: e.target.value } : eq
-                    );
-                    setField('equipment')(updated);
-                  };
-                  const images = item.images || [];
-                  return (
-                    <div key={i} className="equipment-item-card">
-                      <div className="equipment-item-fields">
-                        <div className="form-group">
-                          <label>Name / brand</label>
-                          <input
-                            type="text"
-                            value={item.name}
-                            onChange={updateItem('name')}
-                            placeholder="Rossignol Experience 88"
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Length (cm)</label>
-                          <input
-                            type="text"
-                            value={item.length}
-                            onChange={updateItem('length')}
-                            placeholder="180"
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Width (mm)</label>
-                          <input
-                            type="text"
-                            value={item.width}
-                            onChange={updateItem('width')}
-                            placeholder="88"
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Binding type</label>
-                          <input
-                            type="text"
-                            value={item.bindingType ?? ''}
-                            onChange={updateItem('bindingType')}
-                            placeholder="Alpine, Tech/Pin, Strap…"
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Age</label>
-                          <select
-                            value={item.age ?? ''}
-                            onChange={updateItem('age')}
-                          >
-                            <option value="">Select age…</option>
-                            {EQUIPMENT_AGE_OPTIONS.map((opt) => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-
-                      {images.length > 0 && (
-                        <div className="equipment-images">
-                          {images.map((url, imgIdx) => (
-                            <div
-                              key={imgIdx}
-                              className={`equipment-image-thumb${imgIdx === 0 ? ' default' : ''}`}
-                            >
-                              <img src={url} alt={imgIdx === 0 ? 'Default photo' : `Photo ${imgIdx + 1}`} />
-                              {imgIdx === 0 && (
-                                <span className="default-badge">Default</span>
-                              )}
-                              <button
-                                type="button"
-                                className="remove-image-btn"
-                                onClick={() => removeImage(i, imgIdx)}
-                                aria-label="Remove photo"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="equipment-item-footer">
-                        <label className={`add-photo-label${uploadingIdx === i ? ' uploading' : ''}`}>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="visually-hidden"
-                            ref={(el) => { fileInputRefs.current[i] = el; }}
-                            onChange={(e) => handleImageUpload(i, e)}
-                            disabled={uploadingIdx === i}
-                          />
-                          {uploadingIdx === i
-                            ? <><span className="spinner" />Uploading…</>
-                            : '+ Add photo'}
-                        </label>
-                        <button
-                          type="button"
-                          className="btn-ghost"
-                          onClick={() =>
-                            setField('equipment')(
-                              form.equipment.filter((_, j) => j !== i)
-                            )
-                          }
-                        >
-                          Remove
-                        </button>
-                      </div>
-                      {uploadErrors[i] && (
-                        <p className="upload-error">{uploadErrors[i]}</p>
-                      )}
-                    </div>
-                  );
-                })}
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() =>
-                    setField('equipment')([
-                      ...form.equipment,
-                      { name: '', length: '', width: '', bindingType: '', age: '', images: [] },
-                    ])
-                  }
-                >
-                  + Add equipment
-                </button>
               </div>
             </div>
 
