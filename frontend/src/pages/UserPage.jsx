@@ -351,15 +351,17 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
 
           <div className="profile-detail-list">
             <div className="profile-section-header">Riding style</div>
-            <ProfileDetail label="Sport" value={u.preferredSport} />
-            <ProfileDetail label="Skill level" value={capitalize(u.skillLevel)} />
+            <ProfileDetail label="Sport" value={u.preferredSport} tag="sky" />
+            <ProfileDetail label="Skill level" value={capitalize(u.skillLevel)} tag="navy" />
             <ProfileDetail
               label="Skier type"
               value={u.skierType != null ? `Type ${u.skierType}` : '—'}
+              tag={u.skierType != null ? 'warning' : undefined}
             />
             <ProfileDetail
               label="Preferred terrain"
               value={capitalize(u.preferredTerrain)}
+              tag="success"
             />
 
             {(u.birthday || u.weightLbs != null || u.heightIn != null || u.bootSoleLengthMm != null) && (
@@ -800,11 +802,15 @@ export default function UserPage({ currentUser, onLogin, onLogout, onBackToHome 
   );
 }
 
-function ProfileDetail({ label, value }) {
+function ProfileDetail({ label, value, tag }) {
   return (
     <div className="profile-detail">
       <div className="profile-detail-label">{label}</div>
-      <div className="profile-detail-value">{value}</div>
+      {tag ? (
+        <span className={`profile-detail-tag tag-${tag}`}>{value}</span>
+      ) : (
+        <div className="profile-detail-value">{value}</div>
+      )}
     </div>
   );
 }
