@@ -67,7 +67,15 @@ function terrainToTerrainType(terrain) {
 }
 
 export default function FormPage({ onSubmit, onCancel, currentUser }) {
-  const [formData, setFormData] = useState(INITIAL_FORM);
+  const [formData, setFormData] = useState(() => ({
+    ...INITIAL_FORM,
+    terrain: currentUser
+      ? terrainToSnowCondition(currentUser.preferredTerrain)
+      : INITIAL_FORM.terrain,
+    style: currentUser
+      ? terrainToTerrainType(currentUser.preferredTerrain)
+      : INITIAL_FORM.style,
+  }));
   const [selectedEquipment, setSelectedEquipment] = useState(
     currentUser?.equipment?.[0] || null
   );
@@ -106,8 +114,8 @@ export default function FormPage({ onSubmit, onCancel, currentUser }) {
         brand: userEquipment.name || '',
         lengthCm: userEquipment.length || '',
         age: '1-2 years', // Not in user data
-        snowCondition: terrainToSnowCondition(currentUser.preferredTerrain),
-        terrainType: terrainToTerrainType(currentUser.preferredTerrain),
+        snowCondition: formData.terrain,
+        terrainType: formData.style,
         skillLevel: currentUser.skillLevel,
         heightIn: currentUser.heightIn || '',
         weightLbs: currentUser.weightLbs || '',
@@ -139,34 +147,73 @@ export default function FormPage({ onSubmit, onCancel, currentUser }) {
 
         <form onSubmit={handleSubmit} className="assessment-form">
           {isLoggedIn ? (
-            <div className="form-section">
-              <div className="section-title">Equipment</div>
-              <div className="section-subtitle">What are you riding?</div>
-              <div className="equipment-selection-list">
-                {currentUser.equipment.map((item, index) => (
-                  <label key={index} className="equipment-selection-item">
-                    <input
-                      type="radio"
-                      name="selectedEquipment"
-                      value={item}
-                      checked={selectedEquipment === item}
-                      onChange={() => handleEquipmentSelection(item)}
-                    />
-                    {item.images?.[0] && (
-                      <img
-                        src={item.images[0]}
-                        alt=""
-                        className="equip-select-thumb"
+            <>
+              <div className="form-section">
+                <div className="section-title">Equipment</div>
+                <div className="section-subtitle">What are you riding?</div>
+                <div className="equipment-selection-list">
+                  {currentUser.equipment.map((item, index) => (
+                    <label key={index} className="equipment-selection-item">
+                      <input
+                        type="radio"
+                        name="selectedEquipment"
+                        value={item}
+                        checked={selectedEquipment === item}
+                        onChange={() => handleEquipmentSelection(item)}
                       />
-                    )}
-                    <span>{item.name}</span>
-                    <span className="equipment-details">
-                      {item.length}cm, {item.width}mm
-                    </span>
-                  </label>
-                ))}
+                      {item.images?.[0] && (
+                        <img
+                          src={item.images[0]}
+                          alt=""
+                          className="equip-select-thumb"
+                        />
+                      )}
+                      <span>{item.name}</span>
+                      <span className="equipment-details">
+                        {item.length}cm, {item.width}mm
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
+
+              <div className="form-section">
+                <div className="section-title">Conditions</div>
+                <div className="section-subtitle">Where do you usually ride?</div>
+
+                <div className="choice-group">
+                  <div className="choice-group-title">Snow type</div>
+                  <div className="segmented-grid grid-3">
+                    {terrainOptions.map((option) => (
+                      <TileOption
+                        key={option.value}
+                        name="terrain"
+                        value={option.value}
+                        checked={formData.terrain === option.value}
+                        onSelect={handleTileSelect}
+                        label={option.label}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="choice-group">
+                  <div className="choice-group-title">Terrain</div>
+                  <div className="segmented-grid grid-3">
+                    {styleOptions.map((option) => (
+                      <TileOption
+                        key={option.value}
+                        name="style"
+                        value={option.value}
+                        checked={formData.style === option.value}
+                        onSelect={handleTileSelect}
+                        label={option.label}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
           ) : (
             <>
               <div className="form-section">
