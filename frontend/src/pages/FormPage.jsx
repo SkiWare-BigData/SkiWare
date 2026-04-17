@@ -113,9 +113,9 @@ export default function FormPage({ onSubmit, onCancel, currentUser }) {
             : 'skis',
         brand: userEquipment.name || '',
         lengthCm: userEquipment.length || '',
-        age: '1-2 years', // Not in user data
-        snowCondition: formData.terrain,
-        terrainType: formData.style,
+        age: userEquipment.age || '1-2 years',
+        snowCondition: terrainToSnowCondition(currentUser.preferredTerrain),
+        terrainType: terrainToTerrainType(currentUser.preferredTerrain),
         skillLevel: currentUser.skillLevel,
         heightIn: currentUser.heightIn || '',
         weightLbs: currentUser.weightLbs || '',

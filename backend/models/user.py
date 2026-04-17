@@ -13,6 +13,7 @@ class EquipmentItem(BaseModel):
     length: str = ""     # e.g. "180" (cm) or "180cm"
     width: str = ""      # e.g. "88" (mm waist) or "88mm"
     bindingType: str = ""  # e.g. "Alpine", "Tech/Pin", "Frame", "Strap"
+    age: str = ""        # e.g. "0-1 year", "1-2 years", "2-5 years", "5+ years"
     images: list[str] = []  # list of image URLs; index 0 is the default/cover image
 
 

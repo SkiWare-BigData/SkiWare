@@ -216,8 +216,8 @@ def test_user_router_supports_crud_flow():
     assert update_response.status_code == 200
     assert update_response.json()["preferredSport"] == "Skier"
     assert update_response.json()["equipment"] == [
-        {"name": "Rossignol Experience 88", "length": "180", "width": "88", "bindingType": "", "images": []},
-        {"name": "K2 Mindbender 108Ti", "length": "184", "width": "108", "bindingType": "", "images": []},
+        {"name": "Rossignol Experience 88", "length": "180", "width": "88", "bindingType": "", "age": "", "images": []},
+        {"name": "K2 Mindbender 108Ti", "length": "184", "width": "108", "bindingType": "", "age": "", "images": []},
     ]
     assert update_response.json()["preferredTerrain"] == "backcountry"
     assert update_response.json()["weightLbs"] == 158.7
