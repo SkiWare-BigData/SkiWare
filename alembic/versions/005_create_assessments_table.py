@@ -6,7 +6,6 @@ Create Date: 2026-04-16
 """
 from typing import Sequence, Union
 
-import sqlalchemy as sa
 from alembic import op
 
 revision: str = "005"
@@ -16,24 +15,25 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.create_table(
-        "assessments",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("user_id", sa.String(), nullable=False),
-        sa.Column("equipment_type", sa.String(20), nullable=False),
-        sa.Column("brand", sa.String(), nullable=False, server_default=""),
-        sa.Column("safe_to_ski", sa.Boolean(), nullable=False),
-        sa.Column("severity", sa.Integer(), nullable=False),
-        sa.Column("verdict", sa.String(10), nullable=False),
-        sa.Column("request_data", sa.JSON(), nullable=False),
-        sa.Column("response_data", sa.JSON(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
-    )
-    op.create_index("ix_assessments_user_id", "assessments", ["user_id"])
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS assessments (
+            id SERIAL PRIMARY KEY,
+            user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            equipment_type VARCHAR(20) NOT NULL,
+            brand VARCHAR NOT NULL DEFAULT '',
+            safe_to_ski BOOLEAN NOT NULL,
+            severity INTEGER NOT NULL,
+            verdict VARCHAR(10) NOT NULL,
+            request_data JSON NOT NULL,
+            response_data JSON NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL
+        )
+    """)
+    op.execute("""
+        CREATE INDEX IF NOT EXISTS ix_assessments_user_id ON assessments (user_id)
+    """)
 
 
 def downgrade() -> None:
-    op.drop_index("ix_assessments_user_id", table_name="assessments")
-    op.drop_table("assessments")
+    op.execute("DROP INDEX IF EXISTS ix_assessments_user_id")
+    op.execute("DROP TABLE IF EXISTS assessments")
