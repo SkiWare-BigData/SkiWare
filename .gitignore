@@ -9,3 +9,7 @@ postgres_data/
 uploads/*
 !uploads/.gitkeep
 docs/
+
+# Database dump files — contain credentials and user data
+*_dump.sql
+*_dump_*.sql

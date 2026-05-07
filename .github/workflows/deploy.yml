@@ -67,10 +67,7 @@ jobs:
             --min-instances 0 \
             --max-instances 3 \
             --service-account ${{ secrets.CLOUD_RUN_SA }} \
-            --set-env-vars "CLOUD_SQL_INSTANCE=${{ secrets.CLOUD_SQL_INSTANCE }}" \
-            --set-env-vars "DB_USER=${{ secrets.DB_USER }}" \
-            --set-env-vars "DB_PASS=${{ secrets.DB_PASS }}" \
-            --set-env-vars "DB_NAME=${{ secrets.DB_NAME }}" \
+            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
             --set-env-vars "GOOGLE_PLACES_API_KEY=${{ secrets.GOOGLE_PLACES_API_KEY }}" \
             --set-env-vars "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" \
             --set-env-vars "GCP_PROJECT=${{ secrets.GCP_PROJECT_ID }}" \
@@ -109,10 +106,7 @@ jobs:
 
       - name: Deploy Cloud Run Job
         run: |
-          ENV_VARS="CLOUD_SQL_INSTANCE=${{ secrets.CLOUD_SQL_INSTANCE }}"
-          ENV_VARS="$ENV_VARS,DB_USER=${{ secrets.DB_USER }}"
-          ENV_VARS="$ENV_VARS,DB_PASSWORD=${{ secrets.DB_PASS }}"
-          ENV_VARS="$ENV_VARS,DB_NAME=${{ secrets.DB_NAME }}"
+          ENV_VARS="DATABASE_URL=${{ secrets.DATABASE_URL }}"
           ENV_VARS="$ENV_VARS,GCP_PROJECT=${{ secrets.GCP_PROJECT_ID }}"
           ENV_VARS="$ENV_VARS,GCP_REGION=${{ env.REGION }}"
           ENV_VARS="$ENV_VARS,YOUTUBE_API_KEY=${{ secrets.YOUTUBE_API_KEY }}"

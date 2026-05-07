@@ -22,7 +22,7 @@ services:
       - "8080:8080"
     environment:
       - PORT=8080
-      - DATABASE_URL=postgresql+asyncpg://skiware:skiware@db:5432/skiware
+      - DATABASE_URL=${DATABASE_URL}
       - GOOGLE_PLACES_API_KEY=${GOOGLE_PLACES_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GCP_PROJECT=${GCP_PROJECT}
